@@ -1,0 +1,23 @@
+[package]
+name = "comprs"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+# The `lib` artifact is needed for the standalone target
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", features = [
+    "assert_process_allocs",
+    "standalone",
+] }
+# "specifying a member crate name of a workspace and setting git to the repository containing the workspace"
+nih_plug_vizia = { git = "https://github.com/robbert-vdh/nih-plug.git" }
+
+
+atomic_float = "0.1"
+
+[workspace]
+members = ["xtask"]
