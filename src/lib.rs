@@ -1,9 +1,8 @@
 use atomic_float::AtomicF32;
 use nih_plug::prelude::*;
 use nih_plug_vizia::ViziaState;
-use std::sync::Arc;
+use std::sync::{mpsc::channel, Arc};
 
-mod dsp;
 mod editor;
 
 /// The time it takes for the peak meter to decay by 12 dB after switching to complete silence.
@@ -125,14 +124,56 @@ impl Plugin for Gain {
         _aux: &mut AuxiliaryBuffers,
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        for channel_samples in buffer.iter_samples() {
+        let threshold = 0.5;
+        let slope = 0.5;
+        let lookahead = 3.0 * 1e-3;
+        let window_width = 1.0 * 1e-3;
+        let attack_time = 0.1 * 1e-3;
+        let release_time = 300.0 * 1e-3;
+
+        let sample_rate = 44_100.0f32;
+        let attack = (-1.0 / (sample_rate * attack_time)).exp();
+        let release = (-1.0 / (sample_rate * release_time)).exp();
+
+        let mut envelope = 0.0;
+        let lookahead_sample_offset = (sample_rate * lookahead) as usize;
+        let num_samples_in_lookahead = (sample_rate * window_width) as usize;
+
+        let n = buffer.samples();
+        for (i, mut channel_samples) in buffer.iter_samples().enumerate() {
             let mut amplitude = 0.0;
             let num_samples = channel_samples.len();
+            let init_gain = self.params.gain.smoothed.next();
 
-            let gain = self.params.gain.smoothed.next();
-            for sample in channel_samples {
+            for sample in channel_samples.iter_mut() {
+                *sample *= init_gain;
+                let mut sum = 0.0;
+                for j in 0..num_samples_in_lookahead {
+                    let lookahead_index = i + j + lookahead_sample_offset;
+
+                    let smp = {
+                        if let Some(a) = channel_samples.get_mut(lookahead_index) {
+                            *a
+                        } else {
+                            0.0
+                        }
+                    };
+                    sum += smp * smp;
+                }
+                let rms = (sum / num_samples_in_lookahead as f32).sqrt();
+                let theta = {
+                    if rms > envelope {
+                        attack
+                    } else {
+                        release
+                    }
+                };
+                envelope = (1.0 - theta) * rms + theta * envelope;
+                let mut gain = 1.0;
+                if envelope > threshold {
+                    gain -= (envelope - threshold) * slope;
+                }
                 *sample *= gain;
-
                 amplitude += *sample;
             }
 
