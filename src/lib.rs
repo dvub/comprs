@@ -5,7 +5,6 @@ use std::sync::Arc;
 
 mod dsp;
 mod editor;
-use dsp::LPF;
 
 /// The time it takes for the peak meter to decay by 12 dB after switching to complete silence.
 const PEAK_METER_DECAY_MS: f64 = 150.0;
@@ -21,7 +20,6 @@ pub struct Gain {
     ///
     /// This is stored as voltage gain.
     peak_meter: Arc<AtomicF32>,
-    lpf: LPF,
 }
 
 #[derive(Params)]
@@ -33,9 +31,6 @@ struct GainParams {
 
     #[id = "gain"]
     pub gain: FloatParam,
-
-    #[id = "cutoff"]
-    pub cutoff: FloatParam,
 }
 
 impl Default for Gain {
@@ -45,7 +40,6 @@ impl Default for Gain {
 
             peak_meter_decay_weight: 1.0,
             peak_meter: Arc::new(AtomicF32::new(util::MINUS_INFINITY_DB)),
-            lpf: LPF::new(),
         }
     }
 }
@@ -68,10 +62,6 @@ impl Default for GainParams {
             .with_unit(" dB")
             .with_value_to_string(formatters::v2s_f32_gain_to_db(2))
             .with_string_to_value(formatters::s2v_f32_gain_to_db()),
-            cutoff: FloatParam::new("Gain", 0.99, FloatRange::Linear { min: 0.0, max: 1.0 }), // .with_smoother(SmoothingStyle::Logarithmic(50.0))
-                                                                                              // .with_unit(" hi")
-                                                                                              // .with_value_to_string(formatters::v2s_f32_gain_to_db(2))
-                                                                                              // .with_string_to_value(formatters::s2v_f32_gain_to_db()),
         }
     }
 }
@@ -140,12 +130,10 @@ impl Plugin for Gain {
             let num_samples = channel_samples.len();
 
             let gain = self.params.gain.smoothed.next();
-            let cutoff = self.params.cutoff.value();
             for sample in channel_samples {
                 *sample *= gain;
 
                 amplitude += *sample;
-                *sample = self.lpf.process(*sample, cutoff);
             }
 
             // To save resources, a plugin can (and probably should!) only perform expensive
