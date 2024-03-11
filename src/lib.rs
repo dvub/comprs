@@ -1,15 +1,17 @@
 use atomic_float::AtomicF32;
+use circular_buffer::CircularBuffer;
+use dsp::{Compressor, BUFFER_SIZE};
 use nih_plug::prelude::*;
 use nih_plug_vizia::ViziaState;
-use std::sync::{mpsc::channel, Arc};
-
+use std::sync::Arc;
+mod dsp;
 mod editor;
-
 /// The time it takes for the peak meter to decay by 12 dB after switching to complete silence.
 const PEAK_METER_DECAY_MS: f64 = 150.0;
 
 /// This is mostly identical to the gain example, minus some fluff, and with a GUI.
 pub struct Gain {
+    compressor: Compressor,
     params: Arc<GainParams>,
     /// Needed to normalize the peak meter's response based on the sample rate.
     peak_meter_decay_weight: f32,
@@ -39,6 +41,13 @@ impl Default for Gain {
 
             peak_meter_decay_weight: 1.0,
             peak_meter: Arc::new(AtomicF32::new(util::MINUS_INFINITY_DB)),
+            compressor: Compressor {
+                rms: 0.0,
+                envelope: 0.0,
+                gain: 1.0,
+                squared_sum: 0.0,
+                buf: CircularBuffer::<BUFFER_SIZE, f32>::new(),
+            },
         }
     }
 }
@@ -124,59 +133,27 @@ impl Plugin for Gain {
         _aux: &mut AuxiliaryBuffers,
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        let threshold = 0.5;
-        let slope = 0.5;
-        let lookahead = 3.0 * 1e-3;
-        let window_width = 1.0 * 1e-3;
+        // https://www.musicdsp.org/en/latest/Effects/169-compressor.html
+
+        let threshold = 0.1;
+        let slope = 1.0;
+
+        // let window_width = 1.0 * 1e-3;
         let attack_time = 0.1 * 1e-3;
         let release_time = 300.0 * 1e-3;
 
-        let sample_rate = 44_100.0f32;
-        let attack = (-1.0 / (sample_rate * attack_time)).exp();
-        let release = (-1.0 / (sample_rate * release_time)).exp();
-
-        let mut envelope = 0.0;
-        let lookahead_sample_offset = (sample_rate * lookahead) as usize;
-        let num_samples_in_lookahead = (sample_rate * window_width) as usize;
-
-        let n = buffer.samples();
-        for (i, mut channel_samples) in buffer.iter_samples().enumerate() {
+        #[allow(clippy::unused_enumerate_index)]
+        for (_channel_index, mut channel_samples) in buffer.iter_samples().enumerate() {
             let mut amplitude = 0.0;
             let num_samples = channel_samples.len();
             let init_gain = self.params.gain.smoothed.next();
-
-            for sample in channel_samples.iter_mut() {
+            for (_i, sample) in channel_samples.iter_mut().enumerate() {
                 *sample *= init_gain;
-                let mut sum = 0.0;
-                for j in 0..num_samples_in_lookahead {
-                    let lookahead_index = i + j + lookahead_sample_offset;
-
-                    let smp = {
-                        if let Some(a) = channel_samples.get_mut(lookahead_index) {
-                            *a
-                        } else {
-                            0.0
-                        }
-                    };
-                    sum += smp * smp;
-                }
-                let rms = (sum / num_samples_in_lookahead as f32).sqrt();
-                let theta = {
-                    if rms > envelope {
-                        attack
-                    } else {
-                        release
-                    }
-                };
-                envelope = (1.0 - theta) * rms + theta * envelope;
-                let mut gain = 1.0;
-                if envelope > threshold {
-                    gain -= (envelope - threshold) * slope;
-                }
-                *sample *= gain;
+                *sample =
+                    self.compressor
+                        .process(*sample, attack_time, release_time, threshold, slope);
                 amplitude += *sample;
             }
-
             // To save resources, a plugin can (and probably should!) only perform expensive
             // calculations that are only displayed on the GUI while the GUI is open
             if self.params.editor_state.is_open() {
@@ -188,7 +165,6 @@ impl Plugin for Gain {
                     current_peak_meter * self.peak_meter_decay_weight
                         + amplitude * (1.0 - self.peak_meter_decay_weight)
                 };
-
                 self.peak_meter
                     .store(new_peak_meter, std::sync::atomic::Ordering::Relaxed)
             }

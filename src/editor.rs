@@ -49,6 +49,8 @@ pub(crate) fn create(
             Label::new(cx, "Hello, world!");
             ParamSlider::new(cx, Data::params, |params| &params.gain);
 
+            Label::new(cx, 0.0);
+
             PeakMeter::new(
                 cx,
                 Data::peak_meter
