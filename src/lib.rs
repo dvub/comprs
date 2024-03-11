@@ -43,9 +43,8 @@ impl Default for Gain {
             peak_meter_decay_weight: 1.0,
             peak_meter: Arc::new(AtomicF32::new(util::MINUS_INFINITY_DB)),
             compressor: Compressor {
-                rms: 0.0,
-                envelope: 0.0,
-                gain: 1.0,
+                // rms: 0.0,
+                average_gain: 0.0,
                 squared_sum: 0.0,
                 buf: CircularBuffer::<BUFFER_SIZE, f32>::new(),
             },
