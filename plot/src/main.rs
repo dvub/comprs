@@ -7,17 +7,16 @@ use rand::Rng;
 const OUT_FILE_NAME: &str = "plots/0.png";
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut rng = rand::thread_rng();
-    let data: Vec<f32> = (0..1000)
-        .map(|_| rng.gen_range((f32::MAX * 0.9)..f32::MAX))
-        .collect();
+    let data: Vec<f32> = (0..44_100).map(|_| rng.gen_range(0.9..1.0f32)).collect();
 
     let mut comp = Compressor {
         rms: 0.0,
         envelope: 0.0,
         gain: 1.0,
         squared_sum: 0.0,
-        buf: CircularBuffer::<44, f32>::new(),
+        buf: CircularBuffer::<441, f32>::from([0.0; 441]),
     };
+
     let threshold = 0.1;
     let slope = 1.0;
 
@@ -44,7 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .set_label_area_size(LabelAreaPosition::Left, 60)
         .set_label_area_size(LabelAreaPosition::Bottom, 60)
         .caption("Area Chart Demo", ("sans-serif", 40))
-        .build_cartesian_2d(0.0..(data.len() as f32 - 1.0), 0.0..f32::MAX)?;
+        .build_cartesian_2d(0.0..(data.len() as f32 - 1.0), 0.0..1.0f32)?;
 
     chart
         .configure_mesh()

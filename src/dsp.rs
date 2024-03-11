@@ -1,7 +1,7 @@
 use circular_buffer::CircularBuffer;
 const SAMPLE_RATE: f32 = 44_100.0;
 
-pub const BUFFER_SIZE: usize = (SAMPLE_RATE / 1000.0) as usize;
+pub const BUFFER_SIZE: usize = (SAMPLE_RATE / 100.0) as usize;
 pub struct Compressor {
     pub rms: f32,
     pub envelope: f32,
@@ -23,9 +23,11 @@ impl Compressor {
 
         self.buf.push_front(sample);
         self.squared_sum += sample.powi(2);
+        // println!("{}", self.squared_sum);
 
         let old_sample = self.buf.pop_back().unwrap();
         self.squared_sum -= old_sample.powi(2);
+        // println!("{}", self.squared_sum);
 
         self.rms = (self.squared_sum / BUFFER_SIZE as f32).sqrt();
 
@@ -37,7 +39,10 @@ impl Compressor {
             }
         };
         self.envelope = (1.0 - theta) * self.rms + theta * self.envelope;
-
+        println!(
+            "sample: {}, env: {}, theta: {}, rms: {}, squared_sum: {}, gain: {}",
+            sample, self.envelope, theta, self.rms, self.squared_sum, self.gain
+        );
         if self.envelope > threshold {
             self.gain -= (self.envelope - threshold) * slope;
         }
