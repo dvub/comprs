@@ -6,7 +6,7 @@ use rand::Rng;
 const OUT_FILE_NAME: &str = "plots/0.png";
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut rng = rand::thread_rng();
-    let data: Vec<f32> = (0..44_100).map(|_| rng.gen_range(-0.9..=0.9f32)).collect();
+    let data: Vec<f32> = (0..44_100).map(|_| rng.gen_range(-1.0..=1.0f32)).collect();
 
     let mut comp = Compressor::default();
 
