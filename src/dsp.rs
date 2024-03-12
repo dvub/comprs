@@ -28,6 +28,7 @@ impl Compressor {
         release_time: f32,
         threshold: f32,
         ratio: f32,
+        knee_width: f32,
     ) -> (f32, f32) {
         // a compressor is just a way to automatically lower volume of loud signals
 
@@ -68,17 +69,21 @@ impl Compressor {
 
         // now, the last and most important step
         // actually calculating the amount of gain to apply
-
         // if the loudness of the input exceeds our threshold, we'll compress
-        let mut output = sample;
-        let applied = (self.average_gain - threshold) * ratio;
-        // let mut gain = 1.0;
-        if self.average_gain > threshold {
-            // here, we'll take into account our compression ratio
-            output = threshold + (sample - threshold) / ratio;
+        if (2.0 * (self.average_gain - threshold)) < -knee_width {
+            return (sample, 0.0);
         }
-        // finally, return the processed sample
-        (output, applied)
+        if (2.0 * (self.average_gain - threshold).abs()) <= knee_width {
+            let top = (self.average_gain - threshold + (knee_width / 2.0)).powi(2);
+            let out = self.average_gain + ((1.0 / ratio - 1.0) * (top / (2.0 * knee_width)));
+            return (out, 0.0);
+        }
+
+        if (2.0 * (self.average_gain - threshold)) > knee_width {
+            // here, we'll take into account our compression ratio
+            return (threshold + ((sample - threshold) / ratio), 0.0);
+        }
+        (sample, sample)
     }
 }
 impl Default for Compressor {

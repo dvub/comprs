@@ -6,22 +6,23 @@ use rand::Rng;
 const OUT_FILE_NAME: &str = "plots/0.png";
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut rng = rand::thread_rng();
-    let data: Vec<f32> = vec![1.0; 44_100];
+    let mut data: Vec<f32> = vec![0.25; 22_050];
+    data.append(&mut vec![0.75; 22_050]);
 
     let mut comp = Compressor::default();
 
-    let threshold = 0.25;
+    let threshold = 0.5;
     let ratio = 100.0;
 
     // let window_width = 1.0 * 1e-3;
-    //let attack_time = 0.1 * 1e-3;
-    //let release_time = 300.0 * 1e-3;
-    let attack_time = 0.5;
-    let release_time = 0.5;
+
+    let attack_time = 0.05;
+    let release_time = 0.01;
     let compressed_data: Vec<((f32, f32), f32)> = data
         .iter()
-        .map(|sample| {
-            let result = comp.process(*sample, attack_time, release_time, threshold, ratio);
+        .enumerate()
+        .map(|(_i, sample)| {
+            let result = comp.process(*sample, attack_time, release_time, threshold, ratio, 1.0);
 
             (result, comp.average_gain)
         })
@@ -59,6 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         GREEN.mix(0.1),
     ))?;
 
+    /*
     chart.draw_series(LineSeries::new(
         compression_results
             .1
@@ -66,7 +68,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .enumerate()
             .map(|(x, y)| (x as f32, *y)),
         BLACK,
-    ))?;
+    ))?;*/
 
     chart.draw_series(LineSeries::new(
         envelopes.iter().enumerate().map(|(x, y)| (x as f32, *y)),
