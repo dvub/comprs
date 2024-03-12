@@ -1,5 +1,5 @@
 use comprs::dsp::Compressor;
-use plotters::{prelude::*, style::full_palette::PURPLE};
+use plotters::prelude::*;
 use rand::Rng;
 // use crate::dsp::Compressor;
 
@@ -11,12 +11,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut comp = Compressor::default();
 
     let threshold = 0.25;
-    let ratio = 0.5;
+    let ratio = 1.0;
 
     // let window_width = 1.0 * 1e-3;
-    let attack_time = 0.1 * 1e-3;
-    let release_time = 300.0 * 1e-3;
-    let compressed_data: Vec<(f32, f32)> = data
+    //let attack_time = 0.1 * 1e-3;
+    //let release_time = 300.0 * 1e-3;
+    let attack_time = 0.1;
+    let release_time = 0.1;
+    let compressed_data: Vec<((f32, f32), f32)> = data
         .iter()
         .map(|sample| {
             let result = comp.process(*sample, attack_time, release_time, threshold, ratio);
@@ -24,7 +26,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             (result, comp.average_gain)
         })
         .collect();
-    let (values, envelopes): (Vec<f32>, Vec<f32>) = compressed_data.into_iter().unzip();
+    let (compression_results, envelopes): ((Vec<f32>, Vec<f32>), Vec<f32>) =
+        compressed_data.into_iter().unzip();
 
     let root = BitMapBackend::new(OUT_FILE_NAME, (1024, 768)).into_drawing_area();
 
@@ -48,8 +51,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ))?;
 
     chart.draw_series(LineSeries::new(
-        values.iter().enumerate().map(|(x, y)| (x as f32, *y)),
+        compression_results
+            .0
+            .iter()
+            .enumerate()
+            .map(|(x, y)| (x as f32, *y)),
         GREEN.mix(0.1),
+    ))?;
+
+    chart.draw_series(LineSeries::new(
+        compression_results
+            .1
+            .iter()
+            .enumerate()
+            .map(|(x, y)| (x as f32, *y)),
+        BLACK,
     ))?;
 
     chart.draw_series(LineSeries::new(

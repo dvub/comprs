@@ -139,9 +139,10 @@ impl Plugin for CompressorPlugin {
             let num_samples = channel_samples.len();
             let threshold = self.params.threshold.smoothed.next();
             for (_i, sample) in channel_samples.iter_mut().enumerate() {
-                *sample =
-                    self.compressor
-                        .process(*sample, attack_time, release_time, threshold, ratio);
+                *sample = self
+                    .compressor
+                    .process(*sample, attack_time, release_time, threshold, ratio)
+                    .0;
                 amplitude += *sample;
             }
             // To save resources, a plugin can (and probably should!) only perform expensive
