@@ -1,7 +1,7 @@
 use nih_plug::prelude::*;
 
-use comprs::Gain;
+use comprs::CompressorPlugin;
 
 fn main() {
-    nih_export_standalone::<Gain>();
+    nih_export_standalone::<CompressorPlugin>();
 }

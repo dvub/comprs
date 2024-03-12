@@ -8,5 +8,4 @@ edition = "2021"
 [dependencies]
 plotters = "0.3.5"
 rand = "0.8.5"
-circular-buffer = "0.1.6"
 comprs = { path = "../" }

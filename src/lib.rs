@@ -1,6 +1,5 @@
 use atomic_float::AtomicF32;
-use circular_buffer::CircularBuffer;
-use dsp::{Compressor, BUFFER_SIZE};
+use dsp::Compressor;
 use nih_plug::prelude::*;
 use nih_plug_vizia::ViziaState;
 use std::sync::Arc;
@@ -11,9 +10,9 @@ pub mod editor;
 const PEAK_METER_DECAY_MS: f64 = 150.0;
 
 /// This is mostly identical to the gain example, minus some fluff, and with a GUI.
-pub struct Gain {
+pub struct CompressorPlugin {
     compressor: Compressor,
-    params: Arc<GainParams>,
+    params: Arc<CompressorParams>,
     /// Needed to normalize the peak meter's response based on the sample rate.
     peak_meter_decay_weight: f32,
     /// The current data for the peak meter. This is stored as an [`Arc`] so we can share it between
@@ -25,45 +24,40 @@ pub struct Gain {
 }
 
 #[derive(Params)]
-struct GainParams {
+struct CompressorParams {
     /// The editor state, saved together with the parameter state so the custom scaling can be
     /// restored.
     #[persist = "editor-state"]
     editor_state: Arc<ViziaState>,
 
-    #[id = "gain"]
-    pub gain: FloatParam,
+    #[id = "threshold"]
+    pub threshold: FloatParam,
 }
 
-impl Default for Gain {
+impl Default for CompressorPlugin {
     fn default() -> Self {
         Self {
-            params: Arc::new(GainParams::default()),
+            params: Arc::new(CompressorParams::default()),
 
             peak_meter_decay_weight: 1.0,
             peak_meter: Arc::new(AtomicF32::new(util::MINUS_INFINITY_DB)),
-            compressor: Compressor {
-                // rms: 0.0,
-                average_gain: 0.0,
-                squared_sum: 0.0,
-                buf: CircularBuffer::<BUFFER_SIZE, f32>::new(),
-            },
+            compressor: Compressor::default(),
         }
     }
 }
 
-impl Default for GainParams {
+impl Default for CompressorParams {
     fn default() -> Self {
         Self {
             editor_state: editor::default_state(),
 
-            gain: FloatParam::new(
-                "Gain",
+            threshold: FloatParam::new(
+                "Threshold",
                 util::db_to_gain(0.0),
                 FloatRange::Skewed {
-                    min: util::db_to_gain(-30.0),
-                    max: util::db_to_gain(30.0),
-                    factor: FloatRange::gain_skew_factor(-30.0, 30.0),
+                    min: util::db_to_gain(-100.0),
+                    max: util::db_to_gain(10.0),
+                    factor: FloatRange::gain_skew_factor(-100.0, 10.0),
                 },
             )
             .with_smoother(SmoothingStyle::Logarithmic(50.0))
@@ -74,11 +68,11 @@ impl Default for GainParams {
     }
 }
 
-impl Plugin for Gain {
-    const NAME: &'static str = "Gain GUI (VIZIA)";
-    const VENDOR: &'static str = "Moist Plugins GmbH";
-    const URL: &'static str = "https://youtu.be/dQw4w9WgXcQ";
-    const EMAIL: &'static str = "info@example.com";
+impl Plugin for CompressorPlugin {
+    const NAME: &'static str = "COMPRS";
+    const VENDOR: &'static str = "DVBP";
+    const URL: &'static str = "https://dvub.net";
+    const EMAIL: &'static str = "dvubdevs@gmail.com";
 
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
@@ -133,9 +127,6 @@ impl Plugin for Gain {
         _aux: &mut AuxiliaryBuffers,
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        // https://www.musicdsp.org/en/latest/Effects/169-compressor.html
-
-        let threshold = 0.1;
         let slope = 1.0;
 
         // let window_width = 1.0 * 1e-3;
@@ -146,9 +137,8 @@ impl Plugin for Gain {
         for (_channel_index, mut channel_samples) in buffer.iter_samples().enumerate() {
             let mut amplitude = 0.0;
             let num_samples = channel_samples.len();
-            let init_gain = self.params.gain.smoothed.next();
+            let threshold = self.params.threshold.smoothed.next();
             for (_i, sample) in channel_samples.iter_mut().enumerate() {
-                *sample *= init_gain;
                 *sample =
                     self.compressor
                         .process(*sample, attack_time, release_time, threshold, slope);
@@ -173,10 +163,10 @@ impl Plugin for Gain {
         ProcessStatus::Normal
     }
 }
-
-impl ClapPlugin for Gain {
-    const CLAP_ID: &'static str = "com.moist-plugins-gmbh.gain-gui-vizia";
-    const CLAP_DESCRIPTION: Option<&'static str> = Some("A smoothed gain parameter example plugin");
+/*
+impl ClapPlugin for CompressorPlugin {
+    const CLAP_ID: &'static str = "com.dvbp.comprs";
+    const CLAP_DESCRIPTION: Option<&'static str> = Some("...");
     const CLAP_MANUAL_URL: Option<&'static str> = Some(Self::URL);
     const CLAP_SUPPORT_URL: Option<&'static str> = None;
     const CLAP_FEATURES: &'static [ClapFeature] = &[
@@ -187,11 +177,13 @@ impl ClapPlugin for Gain {
     ];
 }
 
-impl Vst3Plugin for Gain {
-    const VST3_CLASS_ID: [u8; 16] = *b"GainGuiVIIIZIAAA";
+nih_export_clap!(CompressorPlugin);
+*/
+
+impl Vst3Plugin for CompressorPlugin {
+    const VST3_CLASS_ID: [u8; 16] = *b"COMPRSSSSSSSSSSS";
     const VST3_SUBCATEGORIES: &'static [Vst3SubCategory] =
         &[Vst3SubCategory::Fx, Vst3SubCategory::Tools];
 }
 
-nih_export_clap!(Gain);
-nih_export_vst3!(Gain);
+nih_export_vst3!(CompressorPlugin);

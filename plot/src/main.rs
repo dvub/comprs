@@ -1,4 +1,3 @@
-use circular_buffer::CircularBuffer;
 use comprs::dsp::Compressor;
 use plotters::prelude::*;
 use rand::Rng;
@@ -7,16 +6,11 @@ use rand::Rng;
 const OUT_FILE_NAME: &str = "plots/0.png";
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut rng = rand::thread_rng();
-    let data: Vec<f32> = (0..44_100).map(|_| rng.gen_range(-0.9..=0.9f32)).collect();
+    let data: Vec<f32> = (0..44_100).map(|_| rng.gen_range(-1.1..=1.1f32)).collect();
 
-    let mut comp = Compressor {
-        // rms: 0.0,
-        average_gain: 0.0,
-        squared_sum: 0.0,
-        buf: CircularBuffer::<441, f32>::from([0.0; 441]),
-    };
+    let mut comp = Compressor::default();
 
-    let threshold = 0.25;
+    let threshold = 0.7;
     let slope = 0.5;
 
     // let window_width = 1.0 * 1e-3;

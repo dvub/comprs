@@ -1,17 +1,17 @@
 use atomic_float::AtomicF32;
 use nih_plug::prelude::{util, Editor};
 use nih_plug_vizia::vizia::prelude::*;
-use nih_plug_vizia::widgets::*;
+use nih_plug_vizia::widgets::{self, *};
 use nih_plug_vizia::{assets, create_vizia_editor, ViziaState, ViziaTheming};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::GainParams;
+use crate::CompressorParams;
 
 #[derive(Lens)]
 struct Data {
-    params: Arc<GainParams>,
+    params: Arc<CompressorParams>,
     peak_meter: Arc<AtomicF32>,
 }
 
@@ -23,7 +23,7 @@ pub(crate) fn default_state() -> Arc<ViziaState> {
 }
 
 pub(crate) fn create(
-    params: Arc<GainParams>,
+    params: Arc<CompressorParams>,
     peak_meter: Arc<AtomicF32>,
     editor_state: Arc<ViziaState>,
 ) -> Option<Box<dyn Editor>> {
@@ -47,9 +47,7 @@ pub(crate) fn create(
                 .child_bottom(Pixels(0.0));
 
             Label::new(cx, "Hello, world!");
-            ParamSlider::new(cx, Data::params, |params| &params.gain);
-
-            Label::new(cx, 0.0);
+            ParamSlider::new(cx, Data::params, |params| &params.threshold);
 
             PeakMeter::new(
                 cx,
