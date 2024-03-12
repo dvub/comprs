@@ -50,7 +50,7 @@ impl Default for CompressorParams {
     fn default() -> Self {
         Self {
             editor_state: editor::default_state(),
-
+            /*
             threshold: FloatParam::new(
                 "Threshold",
                 util::db_to_gain(0.0),
@@ -60,10 +60,20 @@ impl Default for CompressorParams {
                     factor: FloatRange::gain_skew_factor(-100.0, 10.0),
                 },
             )
+
             .with_smoother(SmoothingStyle::Logarithmic(50.0))
             .with_unit(" dB")
             .with_value_to_string(formatters::v2s_f32_gain_to_db(2))
             .with_string_to_value(formatters::s2v_f32_gain_to_db()),
+            */
+            threshold: FloatParam::new(
+                "Threshold",
+                0.5,
+                FloatRange::Linear {
+                    min: -1.0,
+                    max: 1.0,
+                },
+            ),
         }
     }
 }
@@ -127,11 +137,11 @@ impl Plugin for CompressorPlugin {
         _aux: &mut AuxiliaryBuffers,
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        let ratio = 1.0;
+        let ratio = 100.0;
 
         // let window_width = 1.0 * 1e-3;
-        let attack_time = 0.0;
-        let release_time = 0.0;
+        let attack_time = 0.1 * 1e-3;
+        let release_time = 300.0 * 1e-3;
 
         #[allow(clippy::unused_enumerate_index)]
         for (_channel_index, mut channel_samples) in buffer.iter_samples().enumerate() {

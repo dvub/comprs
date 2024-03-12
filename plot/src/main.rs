@@ -6,18 +6,18 @@ use rand::Rng;
 const OUT_FILE_NAME: &str = "plots/0.png";
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut rng = rand::thread_rng();
-    let data: Vec<f32> = (0..44_100).map(|_| rng.gen_range(-1.0..=1.0f32)).collect();
+    let data: Vec<f32> = vec![1.0; 44_100];
 
     let mut comp = Compressor::default();
 
     let threshold = 0.25;
-    let ratio = 1.0;
+    let ratio = 100.0;
 
     // let window_width = 1.0 * 1e-3;
     //let attack_time = 0.1 * 1e-3;
     //let release_time = 300.0 * 1e-3;
-    let attack_time = 0.1;
-    let release_time = 0.1;
+    let attack_time = 0.5;
+    let release_time = 0.5;
     let compressed_data: Vec<((f32, f32), f32)> = data
         .iter()
         .map(|sample| {
@@ -36,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut chart = ChartBuilder::on(&root)
         .set_label_area_size(LabelAreaPosition::Left, 60)
         .set_label_area_size(LabelAreaPosition::Bottom, 60)
-        .caption("Area Chart Demo", ("sans-serif", 40))
+        .caption("Compressor Gain", ("JetBrains Mono", 40))
         .build_cartesian_2d(0.0..(data.len() as f32 - 1.0), -1.0..1.0f32)?;
 
     chart
