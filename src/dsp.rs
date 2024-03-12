@@ -70,13 +70,13 @@ impl Compressor {
         // actually calculating the amount of gain to apply
 
         // if the loudness of the input exceeds our threshold, we'll compress
-        let mut gain = 1.0f32;
+        let mut output = sample;
         if self.average_gain > threshold {
             // here, we'll take into account our compression ratio
-            gain -= (self.average_gain - threshold) * ratio;
+            output *= (self.average_gain - threshold) / ratio;
         }
         // finally, return the processed sample
-        sample * gain
+        output
     }
 }
 impl Default for Compressor {

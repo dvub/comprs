@@ -127,11 +127,11 @@ impl Plugin for CompressorPlugin {
         _aux: &mut AuxiliaryBuffers,
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        let slope = 1.0;
+        let ratio = 1.0;
 
         // let window_width = 1.0 * 1e-3;
-        let attack_time = 0.1 * 1e-3;
-        let release_time = 300.0 * 1e-3;
+        let attack_time = 0.0;
+        let release_time = 0.0;
 
         #[allow(clippy::unused_enumerate_index)]
         for (_channel_index, mut channel_samples) in buffer.iter_samples().enumerate() {
@@ -141,7 +141,7 @@ impl Plugin for CompressorPlugin {
             for (_i, sample) in channel_samples.iter_mut().enumerate() {
                 *sample =
                     self.compressor
-                        .process(*sample, attack_time, release_time, threshold, slope);
+                        .process(*sample, attack_time, release_time, threshold, ratio);
                 amplitude += *sample;
             }
             // To save resources, a plugin can (and probably should!) only perform expensive

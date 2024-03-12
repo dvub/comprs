@@ -1,17 +1,17 @@
 use comprs::dsp::Compressor;
-use plotters::prelude::*;
+use plotters::{prelude::*, style::full_palette::PURPLE};
 use rand::Rng;
 // use crate::dsp::Compressor;
 
 const OUT_FILE_NAME: &str = "plots/0.png";
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut rng = rand::thread_rng();
-    let data: Vec<f32> = (0..44_100).map(|_| rng.gen_range(-1.1..=1.1f32)).collect();
+    let data: Vec<f32> = (0..44_100).map(|_| rng.gen_range(-0.9..=0.9f32)).collect();
 
     let mut comp = Compressor::default();
 
-    let threshold = 0.7;
-    let slope = 0.5;
+    let threshold = 0.25;
+    let ratio = 0.5;
 
     // let window_width = 1.0 * 1e-3;
     let attack_time = 0.1 * 1e-3;
@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let compressed_data: Vec<(f32, f32)> = data
         .iter()
         .map(|sample| {
-            let result = comp.process(*sample, attack_time, release_time, threshold, slope);
+            let result = comp.process(*sample, attack_time, release_time, threshold, ratio);
 
             (result, comp.average_gain)
         })
@@ -44,12 +44,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     chart.draw_series(LineSeries::new(
         data.iter().enumerate().map(|(x, y)| (x as f32, *y)),
-        RED.mix(0.2),
+        RED.mix(0.1),
     ))?;
 
     chart.draw_series(LineSeries::new(
         values.iter().enumerate().map(|(x, y)| (x as f32, *y)),
-        GREEN.mix(0.2),
+        GREEN.mix(0.1),
     ))?;
 
     chart.draw_series(LineSeries::new(
@@ -57,16 +57,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         BLUE,
     ))?;
 
-    /*
-    chart.draw_series(
-        AreaSeries::new(
-            gains.iter().enumerate().map(|(x, y)| (x as f32, *y)),
-            0.0,
-            BLUE.mix(0.2),
-        )
-        .border_style(BLUE),
-    )?;
-    */
+    chart.draw_series(LineSeries::new(
+        vec![threshold; 44100]
+            .iter()
+            .enumerate()
+            .map(|(x, y)| (x as f32, *y)),
+        BLACK,
+    ))?;
+    chart.draw_series(LineSeries::new(
+        vec![-threshold; 44100]
+            .iter()
+            .enumerate()
+            .map(|(x, y)| (x as f32, *y)),
+        BLACK,
+    ))?;
 
     // To avoid the IO failure being ignored silently, we manually call the present function
     root.present().expect("Unable to write result to file, please make sure the proper output dir exists under current dir");
