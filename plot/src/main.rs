@@ -12,26 +12,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut data: Vec<f32> = vec![0.0; len];
     for (index, value) in data.iter_mut().enumerate() {
         let factor = {
-            if index >= 22_050 {
+            if index >= (len / 2) {
                 1.0
             } else {
                 0.5
             }
         };
         // Calculate the sine value for the current index
-        *value = (index as f32).sin() * factor;
+        *value = (index as f32 * 0.1).sin() * factor;
     }
     //data.append(&mut vec![0.75; 22_050]);
 
     let mut comp = Compressor::default();
 
     let threshold = 0.6;
-    let ratio = 100.0;
-    let knee = 0.2;
+    let ratio = 2.0;
+    let knee = 0.20;
 
     // let window_width = 1.0 * 1e-3;
 
-    let attack_time = 0.01;
+    let attack_time = 0.05;
     let release_time = 0.01;
     let compressed_data: Vec<((f32, f32), f32)> = data
         .iter()
