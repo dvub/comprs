@@ -7,14 +7,12 @@ use rand::Rng;
 
 const OUT_FILE_NAME: &str = "plots/0.png";
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let len = 5_000;
+    let len = 44_100;
     //let mut rng = rand::thread_rng();
     let mut data: Vec<f32> = vec![0.0; len];
     for (index, value) in data.iter_mut().enumerate() {
         let factor = {
-            if index >= 3_750 {
-                1.5
-            } else if index >= 2_500 {
+            if index >= 22_050 {
                 1.0
             } else {
                 0.5
@@ -29,12 +27,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let threshold = 0.6;
     let ratio = 100.0;
-    let knee = 0.0;
+    let knee = 0.2;
 
     // let window_width = 1.0 * 1e-3;
 
-    let attack_time = 0.0001;
-    let release_time = 0.00001;
+    let attack_time = 0.01;
+    let release_time = 0.01;
     let compressed_data: Vec<((f32, f32), f32)> = data
         .iter()
         .enumerate()
@@ -47,7 +45,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (compression_results, envelopes): ((Vec<f32>, Vec<f32>), Vec<f32>) =
         compressed_data.into_iter().unzip();
 
-    let root = BitMapBackend::new(OUT_FILE_NAME, (1024, 768)).into_drawing_area();
+    let root = BitMapBackend::new(OUT_FILE_NAME, (2000, 2000)).into_drawing_area();
 
     root.fill(&WHITE)?;
 
@@ -57,11 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .caption("Compressor Gain", ("JetBrains Mono", 40))
         .build_cartesian_2d(0.0..(data.len() as f32 - 1.0), -1.0..1.0f32)?;
 
-    chart
-        .configure_mesh()
-        .disable_x_mesh()
-        .disable_y_mesh()
-        .draw()?;
+    chart.configure_mesh().disable_x_mesh().draw()?;
 
     chart.draw_series(LineSeries::new(
         data.iter().enumerate().map(|(x, y)| (x as f32, *y)),
@@ -83,6 +77,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     chart.draw_series(LineSeries::new(
         vec![threshold; data.len()]
+            .iter()
+            .enumerate()
+            .map(|(x, y)| (x as f32, *y)),
+        BLACK,
+    ))?;
+    chart.draw_series(LineSeries::new(
+        vec![-threshold; data.len()]
             .iter()
             .enumerate()
             .map(|(x, y)| (x as f32, *y)),
