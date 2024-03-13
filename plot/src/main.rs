@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use comprs::dsp::Compressor;
 use plotters::prelude::*;
 use rand::Rng;
@@ -5,9 +7,13 @@ use rand::Rng;
 
 const OUT_FILE_NAME: &str = "plots/0.png";
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut rng = rand::thread_rng();
-    let mut data: Vec<f32> = vec![0.25; 22_050];
-    data.append(&mut vec![0.75; 22_050]);
+    //let mut rng = rand::thread_rng();
+    let mut data: Vec<f32> = vec![0.0; 44_100];
+    for (index, value) in data.iter_mut().enumerate() {
+        // Calculate the sine value for the current index
+        *value = (index as f32 * PI).sin() * 10.0;
+    }
+    //data.append(&mut vec![0.75; 22_050]);
 
     let mut comp = Compressor::default();
 
