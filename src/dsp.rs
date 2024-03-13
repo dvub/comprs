@@ -76,7 +76,7 @@ impl Compressor {
         if (2.0 * (self.average_gain - threshold).abs()) <= knee_width {
             let top = (self.average_gain - threshold + (knee_width / 2.0)).powi(2);
             let out = self.average_gain + ((1.0 / ratio - 1.0) * (top / (2.0 * knee_width)));
-            return (out, 0.0);
+            return (sample * out, 0.0);
         }
 
         if (2.0 * (self.average_gain - threshold)) > knee_width {

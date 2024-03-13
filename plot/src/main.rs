@@ -7,28 +7,36 @@ use rand::Rng;
 
 const OUT_FILE_NAME: &str = "plots/0.png";
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let len = 3_000;
     //let mut rng = rand::thread_rng();
-    let mut data: Vec<f32> = vec![0.0; 44_100];
+    let mut data: Vec<f32> = vec![0.0; len];
     for (index, value) in data.iter_mut().enumerate() {
         // Calculate the sine value for the current index
-        *value = (index as f32 * PI).sin() * 10.0;
+        *value = (index as f32).sin() * 0.5;
     }
+    let mut rest: Vec<f32> = vec![0.0; len];
+    for (index, value) in rest.iter_mut().enumerate() {
+        // Calculate the sine value for the current index
+        *value = (index as f32).sin() * 1.0;
+    }
+    data.append(&mut rest);
     //data.append(&mut vec![0.75; 22_050]);
 
     let mut comp = Compressor::default();
 
-    let threshold = 0.5;
+    let threshold = 0.6;
     let ratio = 100.0;
+    let knee = 0.1;
 
     // let window_width = 1.0 * 1e-3;
 
-    let attack_time = 0.05;
-    let release_time = 0.01;
+    let attack_time = 0.0001;
+    let release_time = 0.00001;
     let compressed_data: Vec<((f32, f32), f32)> = data
         .iter()
         .enumerate()
         .map(|(_i, sample)| {
-            let result = comp.process(*sample, attack_time, release_time, threshold, ratio, 1.0);
+            let result = comp.process(*sample, attack_time, release_time, threshold, ratio, knee);
 
             (result, comp.average_gain)
         })
@@ -54,7 +62,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     chart.draw_series(LineSeries::new(
         data.iter().enumerate().map(|(x, y)| (x as f32, *y)),
-        RED.mix(0.1),
+        RED,
     ))?;
 
     chart.draw_series(LineSeries::new(
@@ -63,9 +71,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .iter()
             .enumerate()
             .map(|(x, y)| (x as f32, *y)),
-        GREEN.mix(0.1),
+        GREEN,
+    ))?;
+    chart.draw_series(LineSeries::new(
+        envelopes.iter().enumerate().map(|(x, y)| (x as f32, *y)),
+        BLUE,
     ))?;
 
+    chart.draw_series(LineSeries::new(
+        vec![threshold; data.len()]
+            .iter()
+            .enumerate()
+            .map(|(x, y)| (x as f32, *y)),
+        BLACK,
+    ))?;
     /*
     chart.draw_series(LineSeries::new(
         compression_results
@@ -74,20 +93,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .enumerate()
             .map(|(x, y)| (x as f32, *y)),
         BLACK,
-    ))?;*/
-
-    chart.draw_series(LineSeries::new(
-        envelopes.iter().enumerate().map(|(x, y)| (x as f32, *y)),
-        BLUE,
     ))?;
 
-    chart.draw_series(LineSeries::new(
-        vec![threshold; 44100]
-            .iter()
-            .enumerate()
-            .map(|(x, y)| (x as f32, *y)),
-        BLACK,
-    ))?;
+
+
     chart.draw_series(LineSeries::new(
         vec![-threshold; 44100]
             .iter()
@@ -95,7 +104,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .map(|(x, y)| (x as f32, *y)),
         BLACK,
     ))?;
-
+    */
     // To avoid the IO failure being ignored silently, we manually call the present function
     root.present().expect("Unable to write result to file, please make sure the proper output dir exists under current dir");
     println!("Result has been saved to {}", OUT_FILE_NAME);
