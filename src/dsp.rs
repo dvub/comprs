@@ -70,20 +70,24 @@ impl Compressor {
         // now, the last and most important step
         // actually calculating the amount of gain to apply
         // if the loudness of the input exceeds our threshold, we'll compress
-        if (2.0 * (self.average_gain - threshold)) < -knee_width {
-            return (sample, 0.0);
-        }
-        if (2.0 * (self.average_gain - threshold).abs()) <= knee_width {
-            let top = (self.average_gain - threshold + (knee_width / 2.0)).powi(2);
-            let out = self.average_gain + ((1.0 / ratio - 1.0) * (top / (2.0 * knee_width)));
-            return (sample * out, 0.0);
-        }
+        let mut factor = 1.0;
 
+        /*
+                if (2.0 * (self.average_gain - threshold)) < -knee_width {
+                    return (sample, 0.0);
+                }*
+                if (2.0 * (self.average_gain - threshold).abs()) <= knee_width {
+                    let top = (self.average_gain - threshold + (knee_width / 2.0)).powi(2);
+                    let out = self.average_gain + ((1.0 / ratio - 1.0) * (top / (2.0 * knee_width)));
+                    factor = out;
+                }
+        */
         if (2.0 * (self.average_gain - threshold)) > knee_width {
             // here, we'll take into account our compression ratio
-            return (threshold + ((sample - threshold) / ratio), 0.0);
+            let out = (threshold) + ((self.average_gain - threshold) / ratio);
+            factor = out;
         }
-        (sample, sample)
+        (sample * factor, sample)
     }
 }
 impl Default for Compressor {

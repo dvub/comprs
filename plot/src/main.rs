@@ -7,26 +7,29 @@ use rand::Rng;
 
 const OUT_FILE_NAME: &str = "plots/0.png";
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let len = 3_000;
+    let len = 5_000;
     //let mut rng = rand::thread_rng();
     let mut data: Vec<f32> = vec![0.0; len];
     for (index, value) in data.iter_mut().enumerate() {
+        let factor = {
+            if index >= 3_750 {
+                1.5
+            } else if index >= 2_500 {
+                1.0
+            } else {
+                0.5
+            }
+        };
         // Calculate the sine value for the current index
-        *value = (index as f32).sin() * 0.5;
+        *value = (index as f32).sin() * factor;
     }
-    let mut rest: Vec<f32> = vec![0.0; len];
-    for (index, value) in rest.iter_mut().enumerate() {
-        // Calculate the sine value for the current index
-        *value = (index as f32).sin() * 1.0;
-    }
-    data.append(&mut rest);
     //data.append(&mut vec![0.75; 22_050]);
 
     let mut comp = Compressor::default();
 
     let threshold = 0.6;
     let ratio = 100.0;
-    let knee = 0.1;
+    let knee = 0.0;
 
     // let window_width = 1.0 * 1e-3;
 
