@@ -24,15 +24,16 @@ impl Compressor {
         let sample_db = gain_to_db(sample);
         // gain computer
         let y_g = {
-            if 2.0 * (sample_db - threshold) < -knee_width {
-                sample_db
-            } else if 2.0 * (sample_db - threshold).abs() <= knee_width {
-                sample_db
-                    + (1.0 / ratio - 1.0) * (sample_db - threshold + knee_width / 2.0).powi(2)
-                        / (2.0 * knee_width)
-            } else if 2.0 * (sample_db - threshold) > knee_width {
-                threshold + (sample_db - threshold) / ratio
+            let difference = sample_db - threshold;
+            if 2.0 * (difference) > knee_width {
+                //println!("A");
+                threshold + (difference / ratio)
+            } else if 2.0 * (difference).abs() <= knee_width {
+                //println!("AB");
+                let gain_reduction = (difference + (knee_width / 2.0)).powi(2) / (2.0 * knee_width);
+                sample_db + (1.0 / ratio - 1.0) * gain_reduction
             } else {
+                //println!("ABC");
                 sample_db
             }
         };
@@ -45,7 +46,6 @@ impl Compressor {
         self.squared_sum += x_l.powi(2);
         self.squared_sum -= old_sample.powi(2);
         // finish calculating RMS
-
         let rms = (self.squared_sum / BUFFER_SIZE as f32).sqrt();
 
         let attack = (-1.0 / (SAMPLE_RATE * attack_time)).exp();
@@ -56,14 +56,9 @@ impl Compressor {
         } else {
             release
         };
-        // combines the current rms value and the previous average gain to get a smooth result
         self.average_gain = (1.0 - theta) * rms + theta * self.average_gain;
-        let y_l = self.average_gain;
-        let c_db = -y_l;
+        let c_db = -self.average_gain;
         let c = db_to_gain(c_db);
-        let y_db = sample_db + c_db + 0.0;
-        let y = db_to_gain(y_db) * sample.signum();
-
         (sample * c, 0.0)
     }
 }
@@ -74,5 +69,54 @@ impl Default for Compressor {
             squared_sum: 0.0,
             buf: CircularBuffer::<BUFFER_SIZE, f32>::from([0.0; BUFFER_SIZE]),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use nih_plug::util::db_to_gain;
+
+    use super::Compressor;
+
+    #[test]
+    fn a() {
+        let len = 44_100;
+
+        let mut data: Vec<f32> = vec![0.0; len];
+        for (index, value) in data.iter_mut().enumerate() {
+            let q = len / 4;
+            let factor = {
+                if index >= (q * 3) {
+                    -5.0
+                } else if index >= (q * 2) {
+                    0.0
+                } else if index >= (q) {
+                    -9.0
+                } else {
+                    -12.0
+                }
+            };
+            *value = (index as f32 * 0.1).sin() * db_to_gain(factor);
+        }
+        let mut comp = Compressor::default();
+        let threshold = -10.0;
+        let ratio = 1.0;
+        let knee = 0.01;
+        let attack_time = 0.0;
+        let release_time = 0.0;
+        let compressed_data: Vec<((f32, f32), f32)> = data
+            .iter()
+            .enumerate()
+            .map(|(_i, sample)| {
+                let result =
+                    comp.process(*sample, attack_time, release_time, threshold, ratio, knee);
+
+                (result, comp.average_gain)
+            })
+            .collect();
+        let (compression_results, envelopes): ((Vec<f32>, Vec<f32>), Vec<f32>) =
+            compressed_data.into_iter().unzip();
+
+        assert_eq!(compression_results.0, data);
     }
 }

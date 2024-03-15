@@ -10,9 +10,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     //let mut rng = rand::thread_rng();
     let mut data: Vec<f32> = vec![0.0; len];
     for (index, value) in data.iter_mut().enumerate() {
+        let q = len / 4;
         let factor = {
-            if index >= (len / 2) {
+            if index >= (q * 3) {
+                -5.0
+            } else if index >= (q * 2) {
                 0.0
+            } else if index >= (q) {
+                -9.0
             } else {
                 -12.0
             }
@@ -25,12 +30,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut comp = Compressor::default();
 
     let threshold = -10.0;
-    let ratio = 100.0;
-    let knee = 0.0;
+    let ratio = 0.0;
+    let knee = 1.0;
 
     // let window_width = 1.0 * 1e-3;
 
-    let attack_time = 0.05;
+    let attack_time = 0.005;
     let release_time = 0.01;
     let compressed_data: Vec<((f32, f32), f32)> = data
         .iter()
@@ -73,21 +78,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         envelopes.iter().enumerate().map(|(x, y)| (x as f32, *y)),
         BLUE,
     ))?;
+    chart.draw_series(LineSeries::new(
+        vec![db_to_gain(threshold); data.len()]
+            .iter()
+            .enumerate()
+            .map(|(x, y)| (x as f32, *y)),
+        BLACK,
+    ))?;
 
-    chart.draw_series(LineSeries::new(
-        vec![threshold; data.len()]
-            .iter()
-            .enumerate()
-            .map(|(x, y)| (x as f32, *y)),
-        BLACK,
-    ))?;
-    chart.draw_series(LineSeries::new(
-        vec![-threshold; data.len()]
-            .iter()
-            .enumerate()
-            .map(|(x, y)| (x as f32, *y)),
-        BLACK,
-    ))?;
     /*
     chart.draw_series(LineSeries::new(
         compression_results

@@ -70,7 +70,7 @@ impl Default for CompressorParams {
                 "Threshold",
                 0.5,
                 FloatRange::Linear {
-                    min: -1.0,
+                    min: -100.0,
                     max: 1.0,
                 },
             ),
@@ -137,11 +137,11 @@ impl Plugin for CompressorPlugin {
         _aux: &mut AuxiliaryBuffers,
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        let ratio = 1.0;
+        let ratio = 1000.0;
 
         // let window_width = 1.0 * 1e-3;
-        let attack_time = 0.05;
-        let release_time = 0.1;
+        let attack_time = 0.005;
+        let release_time = 0.03;
 
         for (_channel_index, mut channel_samples) in buffer.iter_samples().enumerate() {
             let mut amplitude = 0.0;
