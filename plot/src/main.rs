@@ -30,8 +30,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut comp = Compressor::default();
 
     let threshold = -10.0;
-    let ratio = 0.0;
-    let knee = 1.0;
+    let ratio = 100.0;
+    let knee = 0.0;
 
     // let window_width = 1.0 * 1e-3;
 

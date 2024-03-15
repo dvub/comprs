@@ -20,44 +20,38 @@ impl Compressor {
         ratio: f32,
         knee_width: f32,
     ) -> (f32, f32) {
-        // first, we need to be in decibel land
-        let sample_db = gain_to_db(sample);
-        // gain computer
-        let y_g = {
-            let difference = sample_db - threshold;
-            if 2.0 * (difference) > knee_width {
-                //println!("A");
-                threshold + (difference / ratio)
-            } else if 2.0 * (difference).abs() <= knee_width {
-                //println!("AB");
-                let gain_reduction = (difference + (knee_width / 2.0)).powi(2) / (2.0 * knee_width);
-                sample_db + (1.0 / ratio - 1.0) * gain_reduction
-            } else {
-                //println!("ABC");
-                sample_db
-            }
-        };
-        let x_l = sample_db - y_g;
-
+        // peak detection - RMS
         let old_sample = self.buf.pop_back().unwrap();
-        self.buf.push_front(x_l);
-        // now, let's do calculations
-        // this is squaring and updating our running sum
-        self.squared_sum += x_l.powi(2);
+        self.buf.push_front(sample);
+        self.squared_sum += sample.powi(2);
         self.squared_sum -= old_sample.powi(2);
-        // finish calculating RMS
         let rms = (self.squared_sum / BUFFER_SIZE as f32).sqrt();
-
         let attack = (-1.0 / (SAMPLE_RATE * attack_time)).exp();
         let release = (-1.0 / (SAMPLE_RATE * release_time)).exp();
-        // choose - do we want to use attack or release coefficient?
         let theta = if rms > self.average_gain {
             attack
         } else {
             release
         };
         self.average_gain = (1.0 - theta) * rms + theta * self.average_gain;
-        let c_db = -self.average_gain;
+        let avg_db = gain_to_db(self.average_gain);
+        // GAIN COMPUTER
+        let o_db = {
+            let difference = avg_db - threshold;
+            if 2.0 * (difference) > knee_width {
+                //println!("A");
+                threshold + (difference / ratio)
+            } else if 2.0 * (difference).abs() <= knee_width {
+                //println!("AB");
+                let gain_reduction = (difference + (knee_width / 2.0)).powi(2) / (2.0 * knee_width);
+                avg_db + (1.0 / ratio - 1.0) * gain_reduction
+            } else {
+                //println!("ABC");
+                avg_db
+            }
+        };
+        // APPLY
+        let c_db = o_db - avg_db;
         let c = db_to_gain(c_db);
         (sample * c, 0.0)
     }
