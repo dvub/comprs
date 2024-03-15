@@ -143,7 +143,6 @@ impl Plugin for CompressorPlugin {
         let attack_time = 0.05;
         let release_time = 0.1;
 
-        #[allow(clippy::unused_enumerate_index)]
         for (_channel_index, mut channel_samples) in buffer.iter_samples().enumerate() {
             let mut amplitude = 0.0;
             let num_samples = channel_samples.len();

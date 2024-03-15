@@ -1,8 +1,7 @@
-use std::f32::consts::PI;
-
 use comprs::dsp::Compressor;
+use nih_plug::util::db_to_gain;
 use plotters::prelude::*;
-use rand::Rng;
+
 // use crate::dsp::Compressor;
 
 const OUT_FILE_NAME: &str = "plots/0.png";
@@ -13,21 +12,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (index, value) in data.iter_mut().enumerate() {
         let factor = {
             if index >= (len / 2) {
-                1.0
+                0.0
             } else {
-                0.5
+                -12.0
             }
         };
         // Calculate the sine value for the current index
-        *value = (index as f32 * 0.1).sin() * factor;
+        *value = (index as f32 * 0.1).sin() * db_to_gain(factor);
     }
     //data.append(&mut vec![0.75; 22_050]);
 
     let mut comp = Compressor::default();
 
-    let threshold = 0.6;
-    let ratio = 2.0;
-    let knee = 0.20;
+    let threshold = -10.0;
+    let ratio = 100.0;
+    let knee = 0.0;
 
     // let window_width = 1.0 * 1e-3;
 
