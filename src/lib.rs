@@ -137,11 +137,14 @@ impl Plugin for CompressorPlugin {
         _aux: &mut AuxiliaryBuffers,
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        let ratio = 1000.0;
+        //let threshold = -10.0;
+        let ratio = 100.0;
+        let knee = 0.0;
 
         // let window_width = 1.0 * 1e-3;
-        let attack_time = 0.0005;
-        let release_time = 0.0005;
+
+        let attack_time = 0.005;
+        let release_time = 0.05;
 
         for (_channel_index, mut channel_samples) in buffer.iter_samples().enumerate() {
             let mut amplitude = 0.0;
@@ -150,7 +153,7 @@ impl Plugin for CompressorPlugin {
             for (_i, sample) in channel_samples.iter_mut().enumerate() {
                 *sample = self
                     .compressor
-                    .process(*sample, attack_time, release_time, threshold, ratio, 0.0)
+                    .process(*sample, attack_time, release_time, threshold, ratio, knee)
                     .0;
                 amplitude += *sample;
             }
