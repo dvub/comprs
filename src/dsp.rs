@@ -28,7 +28,7 @@ impl Compressor {
         self.buf.push_front(sample);
         self.squared_sum += sample.powi(2);
         self.squared_sum -= old_sample.powi(2);
-        let rms = (self.squared_sum / BUFFER_SIZE as f32).sqrt();
+        let rms = (self.squared_sum / BUFFER_SIZE as f32).sqrt() * 2.0f32.sqrt();
         let attack = (-1.0 / (SAMPLE_RATE * attack_time)).exp();
         let release = (-1.0 / (SAMPLE_RATE * release_time)).exp();
 
