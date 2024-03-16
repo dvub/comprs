@@ -2,7 +2,7 @@ use circular_buffer::CircularBuffer;
 use nih_plug::util::{db_to_gain, gain_to_db};
 const SAMPLE_RATE: f32 = 44_100.0;
 
-pub const BUFFER_SIZE: usize = (SAMPLE_RATE * 0.01) as usize;
+pub const BUFFER_SIZE: usize = (SAMPLE_RATE * 1e-3) as usize;
 pub struct Compressor {
     pub average_gain: f32,
     pub squared_sum: f32,
@@ -20,6 +20,9 @@ impl Compressor {
         ratio: f32,
         knee_width: f32,
     ) -> (f32, f32) {
+        if ratio <= 1.0 {
+            return (sample, 0.0);
+        }
         // peak detection - RMS
         let old_sample = self.buf.pop_back().unwrap();
         self.buf.push_front(sample);
@@ -28,28 +31,31 @@ impl Compressor {
         let rms = (self.squared_sum / BUFFER_SIZE as f32).sqrt();
         let attack = (-1.0 / (SAMPLE_RATE * attack_time)).exp();
         let release = (-1.0 / (SAMPLE_RATE * release_time)).exp();
+
         let theta = if rms > self.average_gain {
             attack
         } else {
             release
         };
         self.average_gain = (1.0 - theta) * rms + theta * self.average_gain;
+
         let avg_db = gain_to_db(self.average_gain);
         // GAIN COMPUTER
         let o_db = {
             let difference = avg_db - threshold;
-            if 2.0 * (difference) > knee_width {
-                //println!("A");
-                threshold + (difference / ratio)
-            } else if 2.0 * (difference).abs() <= knee_width {
+            if 2.0 * (difference).abs() <= knee_width {
                 //println!("AB");
                 let gain_reduction = (difference + (knee_width / 2.0)).powi(2) / (2.0 * knee_width);
                 avg_db + (1.0 / ratio - 1.0) * gain_reduction
+            } else if 2.0 * (difference) > knee_width {
+                //println!("A");
+                threshold + (difference / ratio)
             } else {
                 //println!("ABC");
                 avg_db
             }
         };
+
         // APPLY
         let c_db = o_db - avg_db;
         let c = db_to_gain(c_db);

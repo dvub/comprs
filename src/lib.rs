@@ -140,8 +140,8 @@ impl Plugin for CompressorPlugin {
         let ratio = 1000.0;
 
         // let window_width = 1.0 * 1e-3;
-        let attack_time = 0.005;
-        let release_time = 0.03;
+        let attack_time = 0.0005;
+        let release_time = 0.0005;
 
         for (_channel_index, mut channel_samples) in buffer.iter_samples().enumerate() {
             let mut amplitude = 0.0;
@@ -150,7 +150,7 @@ impl Plugin for CompressorPlugin {
             for (_i, sample) in channel_samples.iter_mut().enumerate() {
                 *sample = self
                     .compressor
-                    .process(*sample, attack_time, release_time, threshold, ratio, 1.0)
+                    .process(*sample, attack_time, release_time, threshold, ratio, 0.0)
                     .0;
                 amplitude += *sample;
             }

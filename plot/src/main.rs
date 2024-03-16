@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let q = len / 4;
         let factor = {
             if index >= (q * 3) {
-                -5.0
+                -12.0
             } else if index >= (q * 2) {
                 0.0
             } else if index >= (q) {
@@ -36,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // let window_width = 1.0 * 1e-3;
 
     let attack_time = 0.005;
-    let release_time = 0.01;
+    let release_time = 0.05;
     let compressed_data: Vec<((f32, f32), f32)> = data
         .iter()
         .enumerate()
