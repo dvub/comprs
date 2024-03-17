@@ -1,15 +1,49 @@
 use circular_buffer::CircularBuffer;
 use nih_plug::util::{db_to_gain, gain_to_db};
+// TODO:
+// make NOT CONSTANT!
 const SAMPLE_RATE: f32 = 44_100.0;
+const BUFFER_SIZE: usize = (SAMPLE_RATE * 1e-3) as usize;
 
-pub const BUFFER_SIZE: usize = (SAMPLE_RATE * 1e-3) as usize;
-pub struct Compressor {
-    pub average_gain: f32,
-    pub squared_sum: f32,
-    pub buf: CircularBuffer<BUFFER_SIZE, f32>,
+// TODO:
+// add documentation!!
+
+struct RmsPeakDetector {
+    squared_sum: f32,
+    buffer: CircularBuffer<BUFFER_SIZE, f32>,
 }
-// https://www.musicdsp.org/en/latest/Effects/169-compressor.html
+impl Default for RmsPeakDetector {
+    fn default() -> Self {
+        Self {
+            squared_sum: 0.0,
+            buffer: CircularBuffer::<BUFFER_SIZE, f32>::from([0.0; BUFFER_SIZE]),
+        }
+    }
+}
+impl RmsPeakDetector {
+    pub fn new(squared_sum: f32) -> Self {
+        RmsPeakDetector {
+            squared_sum,
+            buffer: CircularBuffer::<BUFFER_SIZE, f32>::from([0.0; BUFFER_SIZE]),
+        }
+    }
+    pub fn calculate_rms(&mut self, input: f32) -> f32 {
+        // peak detection - RMS
+        let old_sample = self.buffer.pop_back().unwrap();
+        self.buffer.push_front(input);
+        self.squared_sum += input.powi(2);
+        self.squared_sum -= old_sample.powi(2);
+        (self.squared_sum / BUFFER_SIZE as f32).sqrt() * 2.0f32.sqrt()
+    }
+}
 
+pub struct Compressor {
+    rms: RmsPeakDetector,
+    pub average_gain: f32,
+}
+// https://www.musicdsp.org/en/latest/Effects/169-compressor.html (not the best source)
+// recommended:
+// https://www.eecs.qmul.ac.uk/~josh/documents/2012/GiannoulisMassbergReiss-dynamicrangecompression-JAES2012.pdf
 impl Compressor {
     pub fn process(
         &mut self,
@@ -23,12 +57,8 @@ impl Compressor {
         if ratio <= 1.0 {
             return (sample, 0.0);
         }
-        // peak detection - RMS
-        let old_sample = self.buf.pop_back().unwrap();
-        self.buf.push_front(sample);
-        self.squared_sum += sample.powi(2);
-        self.squared_sum -= old_sample.powi(2);
-        let rms = (self.squared_sum / BUFFER_SIZE as f32).sqrt() * 2.0f32.sqrt();
+
+        let rms = self.rms.calculate_rms(sample);
         let attack = (-1.0 / (SAMPLE_RATE * attack_time)).exp();
         let release = (-1.0 / (SAMPLE_RATE * release_time)).exp();
 
@@ -55,23 +85,22 @@ impl Compressor {
                 avg_db
             }
         };
-
         // APPLY
         let c_db = o_db - avg_db;
         let c = db_to_gain(c_db);
-        (sample * c, 0.0)
+        (sample * c, o_db)
     }
 }
 impl Default for Compressor {
     fn default() -> Self {
         Self {
             average_gain: 0.0,
-            squared_sum: 0.0,
-            buf: CircularBuffer::<BUFFER_SIZE, f32>::from([0.0; BUFFER_SIZE]),
+            rms: RmsPeakDetector::default(),
         }
     }
 }
-
+// TODO:
+// make tests half decent
 #[cfg(test)]
 mod tests {
     use nih_plug::util::db_to_gain;
@@ -114,7 +143,7 @@ mod tests {
                 (result, comp.average_gain)
             })
             .collect();
-        let (compression_results, envelopes): ((Vec<f32>, Vec<f32>), Vec<f32>) =
+        let (compression_results, _): ((Vec<f32>, Vec<f32>), Vec<f32>) =
             compressed_data.into_iter().unzip();
 
         assert_eq!(compression_results.0, data);

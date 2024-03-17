@@ -146,11 +146,11 @@ impl Plugin for CompressorPlugin {
         let attack_time = 0.005;
         let release_time = 0.05;
 
-        for (_channel_index, mut channel_samples) in buffer.iter_samples().enumerate() {
+        for mut channel_samples in buffer.iter_samples() {
             let mut amplitude = 0.0;
             let num_samples = channel_samples.len();
             let threshold = self.params.threshold.smoothed.next();
-            for (_i, sample) in channel_samples.iter_mut().enumerate() {
+            for sample in channel_samples.iter_mut() {
                 *sample = self
                     .compressor
                     .process(*sample, attack_time, release_time, threshold, ratio, knee)
