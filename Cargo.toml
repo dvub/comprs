@@ -20,6 +20,8 @@ atomic_float = "0.1"
 circular-buffer = "0.1.6"
 plotters = "0.3.5"
 rand = "0.8.5"
+dsp = { path = "./dsp" }
+
 
 [workspace]
-members = ["plot", "xtask"]
+members = ["dsp", "plot", "xtask"]

@@ -3,7 +3,6 @@ use dsp::{Compressor, LevelDetectionType};
 use nih_plug::prelude::*;
 use nih_plug_vizia::ViziaState;
 use std::sync::Arc;
-pub mod dsp;
 pub mod editor;
 
 /// The time it takes for the peak meter to decay by 12 dB after switching to complete silence.

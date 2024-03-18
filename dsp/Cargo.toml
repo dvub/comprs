@@ -1,14 +1,10 @@
 [package]
-name = "plot"
+name = "dsp"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-plotters = "0.3.5"
 nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", features = [
     "assert_process_allocs",
     "standalone",
 ] }
-dsp = { path = "../dsp" }
+circular-buffer = "0.1.6"

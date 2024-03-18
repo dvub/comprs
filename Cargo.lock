@@ -699,9 +699,9 @@ dependencies = [
 
 [[package]]
 name = "circular-buffer"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8da9d36ad01a07a2c380bdece16e418820ffa8eda01d3debed9bff3f296a84f"
+checksum = "da987586004ae7c43b7df5e3f7693775068522e1086f8d9b2d74c778a0f43313"
 
 [[package]]
 name = "clang-sys"
@@ -828,6 +828,7 @@ version = "0.1.0"
 dependencies = [
  "atomic_float",
  "circular-buffer",
+ "dsp",
  "nih_plug",
  "nih_plug_vizia",
  "plotters",
@@ -1217,6 +1218,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330c60081dcc4c72131f8eb70510f1ac07223e5d4163db481a04a0befcffa412"
 dependencies = [
  "libloading 0.8.3",
+]
+
+[[package]]
+name = "dsp"
+version = "0.1.0"
+dependencies = [
+ "circular-buffer",
+ "nih_plug",
 ]
 
 [[package]]
@@ -2820,10 +2829,9 @@ checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
 name = "plot"
 version = "0.1.0"
 dependencies = [
- "comprs",
+ "dsp",
  "nih_plug",
  "plotters",
- "rand 0.8.5",
 ]
 
 [[package]]

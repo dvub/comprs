@@ -1,9 +1,6 @@
-use comprs::dsp::{Compressor, LevelDetectionType};
+use dsp::{Compressor, LevelDetectionType};
 use nih_plug::util::db_to_gain;
 use plotters::prelude::*;
-
-// use crate::dsp::Compressor;
-
 const OUT_FILE_NAME: &str = "plots/0.png";
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let len = 44_100;
@@ -26,7 +23,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let threshold = -10.0;
     let ratio = 100.0;
-    let knee = 0.0;
+    let knee = 5.0;
     let attack_time = 0.005;
     let release_time = 0.05;
     let mut comp = Compressor::new(
@@ -35,7 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         threshold,
         ratio,
         knee,
-        LevelDetectionType::Rms,
+        LevelDetectionType::Simple,
     );
     let compressed_data: Vec<((f32, f32), f32)> = data
         .iter()
@@ -43,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|(_i, sample)| {
             let result = comp.process(*sample);
 
-            (result, comp.gain)
+            (result, comp.average_gain)
         })
         .collect();
     let (compression_results, envelopes): ((Vec<f32>, Vec<f32>), Vec<f32>) =
