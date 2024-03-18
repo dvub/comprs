@@ -1,4 +1,4 @@
-use comprs::dsp::Compressor;
+use comprs::dsp::{Compressor, LevelDetectionType};
 use nih_plug::util::db_to_gain;
 use plotters::prelude::*;
 
@@ -22,28 +22,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 -12.0
             }
         };
-        // Calculate the sine value for the current index
         *value = (index as f32 * 0.1).sin() * db_to_gain(factor);
     }
-    //data.append(&mut vec![0.75; 22_050]);
-
-    let mut comp = Compressor::default();
-
     let threshold = -10.0;
     let ratio = 100.0;
     let knee = 0.0;
-
-    // let window_width = 1.0 * 1e-3;
-
     let attack_time = 0.005;
     let release_time = 0.05;
+    let mut comp = Compressor::new(
+        attack_time,
+        release_time,
+        threshold,
+        ratio,
+        knee,
+        LevelDetectionType::Rms,
+    );
     let compressed_data: Vec<((f32, f32), f32)> = data
         .iter()
         .enumerate()
         .map(|(_i, sample)| {
-            let result = comp.process(*sample, attack_time, release_time, threshold, ratio, knee);
+            let result = comp.process(*sample);
 
-            (result, comp.average_gain)
+            (result, comp.gain)
         })
         .collect();
     let (compression_results, envelopes): ((Vec<f32>, Vec<f32>), Vec<f32>) =

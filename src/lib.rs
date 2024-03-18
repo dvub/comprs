@@ -1,5 +1,5 @@
 use atomic_float::AtomicF32;
-use dsp::Compressor;
+use dsp::{Compressor, LevelDetectionType};
 use nih_plug::prelude::*;
 use nih_plug_vizia::ViziaState;
 use std::sync::Arc;
@@ -36,12 +36,25 @@ struct CompressorParams {
 
 impl Default for CompressorPlugin {
     fn default() -> Self {
+        let threshold = -10.0;
+        let ratio = 100.0;
+        let knee = 0.0;
+        let attack_time = 0.005;
+        let release_time = 0.05;
+
         Self {
             params: Arc::new(CompressorParams::default()),
 
             peak_meter_decay_weight: 1.0,
             peak_meter: Arc::new(AtomicF32::new(util::MINUS_INFINITY_DB)),
-            compressor: Compressor::default(),
+            compressor: Compressor::new(
+                attack_time,
+                release_time,
+                threshold,
+                ratio,
+                knee,
+                LevelDetectionType::Rms,
+            ),
         }
     }
 }
@@ -137,24 +150,11 @@ impl Plugin for CompressorPlugin {
         _aux: &mut AuxiliaryBuffers,
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        //let threshold = -10.0;
-        let ratio = 100.0;
-        let knee = 0.0;
-
-        // let window_width = 1.0 * 1e-3;
-
-        let attack_time = 0.005;
-        let release_time = 0.05;
-
         for mut channel_samples in buffer.iter_samples() {
             let mut amplitude = 0.0;
             let num_samples = channel_samples.len();
-            let threshold = self.params.threshold.smoothed.next();
             for sample in channel_samples.iter_mut() {
-                *sample = self
-                    .compressor
-                    .process(*sample, attack_time, release_time, threshold, ratio, knee)
-                    .0;
+                *sample = self.compressor.process(*sample).0;
                 amplitude += *sample;
             }
             // To save resources, a plugin can (and probably should!) only perform expensive

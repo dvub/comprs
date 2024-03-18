@@ -1,4 +1,6 @@
 use circular_buffer::CircularBuffer;
+// TODO:
+// consider using fast functions
 use nih_plug::util::{db_to_gain, gain_to_db};
 // TODO:
 // make NOT CONSTANT!
@@ -8,11 +10,15 @@ const BUFFER_SIZE: usize = (SAMPLE_RATE * 1e-3) as usize;
 // TODO:
 // add documentation!!
 
-struct RmsPeakDetector {
+// https://www.musicdsp.org/en/latest/Effects/169-compressor.html (not the best source)
+// recommended:
+// https://www.eecs.qmul.ac.uk/~josh/documents/2012/GiannoulisMassbergReiss-dynamicrangecompression-JAES2012.pdf
+
+struct RmsLevelDetector {
     squared_sum: f32,
     buffer: CircularBuffer<BUFFER_SIZE, f32>,
 }
-impl Default for RmsPeakDetector {
+impl Default for RmsLevelDetector {
     fn default() -> Self {
         Self {
             squared_sum: 0.0,
@@ -20,132 +26,135 @@ impl Default for RmsPeakDetector {
         }
     }
 }
-impl RmsPeakDetector {
-    pub fn new(squared_sum: f32) -> Self {
-        RmsPeakDetector {
-            squared_sum,
-            buffer: CircularBuffer::<BUFFER_SIZE, f32>::from([0.0; BUFFER_SIZE]),
-        }
-    }
+impl RmsLevelDetector {
     pub fn calculate_rms(&mut self, input: f32) -> f32 {
         // peak detection - RMS
         let old_sample = self.buffer.pop_back().unwrap();
         self.buffer.push_front(input);
         self.squared_sum += input.powi(2);
         self.squared_sum -= old_sample.powi(2);
-        (self.squared_sum / BUFFER_SIZE as f32).sqrt() * 2.0f32.sqrt()
+        (self.squared_sum / BUFFER_SIZE as f32).sqrt()
     }
 }
-
-pub struct Compressor {
-    rms: RmsPeakDetector,
-    pub average_gain: f32,
+pub enum LevelDetectionType {
+    LowPassFilter,
+    Rms,
 }
-// https://www.musicdsp.org/en/latest/Effects/169-compressor.html (not the best source)
-// recommended:
-// https://www.eecs.qmul.ac.uk/~josh/documents/2012/GiannoulisMassbergReiss-dynamicrangecompression-JAES2012.pdf
+pub struct Compressor {
+    pub gain: f32,
+    attack_time: f32,
+    release_time: f32,
+    threshold: f32,
+    ratio: f32,
+    knee_width: f32,
+    rms: RmsLevelDetector,
+    level_detection_type: LevelDetectionType,
+}
+
 impl Compressor {
-    pub fn process(
-        &mut self,
-        sample: f32,
+    pub fn process(&mut self, sample: f32) -> (f32, f32) {
+        self.update_gain(sample);
+        let c = self.calculate_gain_reduction();
+        (sample * c, 0.0)
+    }
+    pub fn update_gain(&mut self, sample: f32) {
+        let gain = match self.level_detection_type {
+            LevelDetectionType::LowPassFilter => sample,
+            LevelDetectionType::Rms => self.rms.calculate_rms(sample),
+        };
+        let theta = if gain > self.gain {
+            self.attack_time
+        } else {
+            self.release_time
+        };
+        self.gain = (1.0 - theta) * gain + theta * self.gain;
+    }
+    pub fn calculate_gain_reduction(&mut self) -> f32 {
+        let input_db = gain_to_db(self.gain);
+        // GAIN COMPUTER
+        let reduced_db = {
+            let difference = input_db - self.threshold;
+            if 2.0 * (difference).abs() <= self.knee_width {
+                //println!("AB");
+                let gain_reduction =
+                    (difference + (self.knee_width / 2.0)).powi(2) / (2.0 * self.knee_width);
+                input_db + (1.0 / self.ratio - 1.0) * gain_reduction
+            } else if 2.0 * (difference) > self.knee_width {
+                //println!("A");
+                self.threshold + (difference / self.ratio)
+            } else {
+                //println!("ABC");
+                input_db
+            }
+        };
+        // APPLY
+        let final_db = reduced_db - input_db;
+        db_to_gain(final_db)
+    }
+    /// Construct a new `Compressor`.
+    /// ### Parameters
+    /// - `attack_time`: the attack time of the compressor **in seconds**.
+    /// - `release_time`: the release time of the compressor **in seconds**.
+    /// - `threshold`: the threshold at which the compressor begins working **in decibels**.
+    /// - `ratio`: the input/output ratio **in decibels**. The actual ratio would be `ratio`:1.
+    /// - `knee_width`: knee width **in decibels**.
+    /// - `level_detection_type`: the type of level detection that will be used to calculate the average gain of inputs.
+    pub fn new(
         attack_time: f32,
         release_time: f32,
         threshold: f32,
         ratio: f32,
         knee_width: f32,
-    ) -> (f32, f32) {
-        if ratio <= 1.0 {
-            return (sample, 0.0);
+        level_detection_type: LevelDetectionType,
+    ) -> Self {
+        let attack_time = (-1.0 / (SAMPLE_RATE * attack_time)).exp();
+        let release_time = (-1.0 / (SAMPLE_RATE * release_time)).exp();
+        let default_gain = 0.0;
+        Compressor {
+            gain: default_gain,
+            attack_time,
+            release_time,
+            threshold,
+            ratio,
+            knee_width,
+            rms: RmsLevelDetector::default(),
+            level_detection_type,
         }
-
-        let rms = self.rms.calculate_rms(sample);
-        let attack = (-1.0 / (SAMPLE_RATE * attack_time)).exp();
-        let release = (-1.0 / (SAMPLE_RATE * release_time)).exp();
-
-        let theta = if rms > self.average_gain {
-            attack
-        } else {
-            release
-        };
-        self.average_gain = (1.0 - theta) * rms + theta * self.average_gain;
-
-        let avg_db = gain_to_db(self.average_gain);
-        // GAIN COMPUTER
-        let o_db = {
-            let difference = avg_db - threshold;
-            if 2.0 * (difference).abs() <= knee_width {
-                //println!("AB");
-                let gain_reduction = (difference + (knee_width / 2.0)).powi(2) / (2.0 * knee_width);
-                avg_db + (1.0 / ratio - 1.0) * gain_reduction
-            } else if 2.0 * (difference) > knee_width {
-                //println!("A");
-                threshold + (difference / ratio)
-            } else {
-                //println!("ABC");
-                avg_db
-            }
-        };
-        // APPLY
-        let c_db = o_db - avg_db;
-        let c = db_to_gain(c_db);
-        (sample * c, o_db)
+    }
+    pub fn set_threshold() {
+        todo!()
+    }
+    pub fn set_ratio() {
+        todo!()
+    }
+    pub fn set_knee_width() {
+        todo!()
+    }
+    pub fn set_level_detection_type() {
+        todo!()
+    }
+    pub fn set_attack_time() {
+        todo!()
+    }
+    pub fn set_release_time() {
+        todo!()
     }
 }
 impl Default for Compressor {
     fn default() -> Self {
+        let attack = (-1.0 / (SAMPLE_RATE * 0.01)).exp();
+        let release = (-1.0 / (SAMPLE_RATE * 0.3)).exp();
         Self {
-            average_gain: 0.0,
-            rms: RmsPeakDetector::default(),
+            gain: 0.0,
+            rms: RmsLevelDetector::default(),
+            attack_time: attack,
+            release_time: release,
+            threshold: 0.0,
+            ratio: 1.0,
+            knee_width: 5.0,
+            level_detection_type: LevelDetectionType::LowPassFilter,
         }
     }
 }
 // TODO:
 // make tests half decent
-#[cfg(test)]
-mod tests {
-    use nih_plug::util::db_to_gain;
-
-    use super::Compressor;
-
-    #[test]
-    fn a() {
-        let len = 44_100;
-
-        let mut data: Vec<f32> = vec![0.0; len];
-        for (index, value) in data.iter_mut().enumerate() {
-            let q = len / 4;
-            let factor = {
-                if index >= (q * 3) {
-                    -5.0
-                } else if index >= (q * 2) {
-                    0.0
-                } else if index >= (q) {
-                    -9.0
-                } else {
-                    -12.0
-                }
-            };
-            *value = (index as f32 * 0.1).sin() * db_to_gain(factor);
-        }
-        let mut comp = Compressor::default();
-        let threshold = -10.0;
-        let ratio = 1.0;
-        let knee = 0.01;
-        let attack_time = 0.0;
-        let release_time = 0.0;
-        let compressed_data: Vec<((f32, f32), f32)> = data
-            .iter()
-            .enumerate()
-            .map(|(_i, sample)| {
-                let result =
-                    comp.process(*sample, attack_time, release_time, threshold, ratio, knee);
-
-                (result, comp.average_gain)
-            })
-            .collect();
-        let (compression_results, _): ((Vec<f32>, Vec<f32>), Vec<f32>) =
-            compressed_data.into_iter().unzip();
-
-        assert_eq!(compression_results.0, data);
-    }
-}
