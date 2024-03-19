@@ -22,45 +22,69 @@ export default function Home() {
 						></Slider>
 						<p>{threshold} dB</p>
 					</div>
-					<div className='RATIO'>
-						<p className='text-center'>Ratio</p>
+					<div>
+						<div className='RATIO'>
+							<p className='text-center'>Ratio</p>
 
-						<Knob
-							size={100}
-							angleOffset={220}
-							angleRange={280}
-							min={0}
-							max={100}
-						>
-							<Arc arcWidth={5} color='#FC5A96' />
-							<Pointer
-								width={5}
-								height={40}
-								radius={10}
-								type='rect'
-								color='#FC5A96'
-							/>
-						</Knob>
-					</div>
-					<div className='ATTACK'>
-						<p className='text-center'>Attack</p>
+							<Knob
+								size={100}
+								angleOffset={220}
+								angleRange={280}
+								min={0}
+								max={100}
+							>
+								<Arc arcWidth={5} color='#FC5A96' />
+								<Pointer
+									width={5}
+									height={40}
+									radius={10}
+									type='rect'
+									color='#FC5A96'
+								/>
+							</Knob>
+						</div>
+						<div>
+							<div className='ATTACK'>
+								<p className='text-center'>Attack</p>
 
-						<Knob
-							size={100}
-							angleOffset={220}
-							angleRange={280}
-							min={0}
-							max={100}
-						>
-							<Arc arcWidth={5} color='#FC5A96' />
-							<Pointer
-								width={5}
-								height={40}
-								radius={10}
-								type='rect'
-								color='#FC5A96'
-							/>
-						</Knob>
+								<Knob
+									size={100}
+									angleOffset={220}
+									angleRange={280}
+									min={0}
+									max={100}
+								>
+									<Arc arcWidth={5} color='#FC5A96' />
+									<Pointer
+										width={5}
+										height={40}
+										radius={10}
+										type='rect'
+										color='#FC5A96'
+									/>
+								</Knob>
+							</div>
+							<div className='Release'>
+								<p className='text-center'>Release</p>
+
+								<Knob
+									size={100}
+									angleOffset={220}
+									angleRange={280}
+									min={0}
+									max={100}
+								>
+									<Arc arcWidth={5} color='#FC5A96' />
+									<Pointer
+										width={5}
+										height={40}
+										radius={10}
+										type='rect'
+										color='#FC5A96'
+									/>
+								</Knob>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
