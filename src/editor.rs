@@ -1,67 +1,80 @@
-use atomic_float::AtomicF32;
-use nih_plug::prelude::{util, Editor};
-use nih_plug_vizia::vizia::prelude::*;
-use nih_plug_vizia::widgets::*;
-use nih_plug_vizia::{assets, create_vizia_editor, ViziaState, ViziaTheming};
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::time::Duration;
+use nih_plug_webview::{
+    DropData, DropEffect, EventStatus, HTMLSource, Key, MouseEvent, WebViewEditor,
+};
 
-use crate::CompressorParams;
+use crate::CompressorPlugin;
 
-#[derive(Lens)]
-struct Data {
-    params: Arc<CompressorParams>,
-    peak_meter: Arc<AtomicF32>,
-}
+pub fn create_editor(_plugin: &mut CompressorPlugin) -> WebViewEditor {
+    // let params = plugin.params.clone();
+    // let gain_value_changed = plugin.params.gain_value_changed.clone();
 
-impl Model for Data {}
+    let size = (300, 450);
 
-// Makes sense to also define this here, makes it a bit easier to keep track of
-pub(crate) fn default_state() -> Arc<ViziaState> {
-    ViziaState::new(|| (200, 150))
-}
+    #[cfg(debug_assertions)]
+    let src = HTMLSource::URL("http://localhost:3000".to_owned());
+    #[cfg(debug_assertions)]
+    let mut editor = WebViewEditor::new(src, size);
 
-pub(crate) fn create(
-    params: Arc<CompressorParams>,
-    peak_meter: Arc<AtomicF32>,
-    editor_state: Arc<ViziaState>,
-) -> Option<Box<dyn Editor>> {
-    create_vizia_editor(editor_state, ViziaTheming::Custom, move |cx, _| {
-        assets::register_noto_sans_light(cx);
-        assets::register_noto_sans_thin(cx);
-
-        Data {
-            params: params.clone(),
-            peak_meter: peak_meter.clone(),
-        }
-        .build(cx);
-
-        VStack::new(cx, |cx| {
-            Label::new(cx, ":3")
-                .font_family(vec![FamilyOwned::Name(String::from(assets::NOTO_SANS))])
-                .font_weight(FontWeightKeyword::Thin)
-                .font_size(30.0)
-                .height(Pixels(50.0))
-                .child_top(Stretch(1.0))
-                .child_bottom(Pixels(0.0));
-
-            Label::new(cx, "Hello, world!");
-            ParamSlider::new(cx, Data::params, |params| &params.threshold);
-
-            PeakMeter::new(
-                cx,
-                Data::peak_meter
-                    .map(|peak_meter| util::gain_to_db(peak_meter.load(Ordering::Relaxed))),
-                Some(Duration::from_millis(600)),
-            )
-            // This is how adding padding works in vizia
-            .top(Pixels(10.0));
+    #[cfg(not(debug_assertions))]
+    let mut editor = nih_plug_webview::editors::editor_with_frontend_dir(
+        "D:\\projects\\rust\\next-gain\\gui\\out".into(),
+        size,
+        None,
+    );
+    editor = editor
+        .with_developer_mode(true)
+        .with_keyboard_handler(move |event| {
+            println!("keyboard event: {event:#?}");
+            event.key == Key::Escape
         })
-        .row_between(Pixels(0.0))
-        .child_left(Stretch(1.0))
-        .child_right(Stretch(1.0));
+        .with_mouse_handler(|event| match event {
+            MouseEvent::DragEntered { .. } => {
+                println!("drag entered");
+                EventStatus::AcceptDrop(DropEffect::Copy)
+            }
+            MouseEvent::DragMoved { .. } => {
+                println!("drag moved");
+                EventStatus::AcceptDrop(DropEffect::Copy)
+            }
+            MouseEvent::DragLeft => {
+                println!("drag left");
+                EventStatus::Ignored
+            }
+            MouseEvent::DragDropped { data, .. } => {
+                if let DropData::Files(files) = data {
+                    println!("drag dropped: {:?}", files);
+                }
+                EventStatus::AcceptDrop(DropEffect::Copy)
+            }
+            _ => EventStatus::Ignored,
+        })
+        .with_event_loop(move |ctx, setter, _window| {
+            /*
+            let mut sent_from_gui = false;
+            while let Ok(value) = ctx.next_event() {
+                if let Ok(action) = serde_json::from_value(value) {
+                    #[allow(clippy::single_match)]
+                    match action {
+                        Action::SetGain { value } => {
+                            sent_from_gui = true;
+                            setter.begin_set_parameter(&params.gain);
+                            setter.set_parameter(&params.gain, value);
+                            setter.end_set_parameter(&params.gain);
+                        }
+                    }
+                } else {
+                    panic!("Invalid action received from web UI.")
+                }
+            }
 
-        ResizeHandle::new(cx);
-    })
+            if !sent_from_gui && gain_value_changed.swap(false, Ordering::Relaxed) {
+                let data = PluginMessage::ParamChange {
+                    param: "gain".to_owned(),
+                    value: params.gain.value(),
+                };
+                let _ = ctx.send_json(json!(data));
+            }
+             */
+        });
+    editor
 }

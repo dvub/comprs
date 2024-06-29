@@ -1,0 +1,48 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Compile Rust Backend (RELEASE)",
+            "type": "shell",
+            "command": "cargo xtask bundle comprs --release",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false,
+            },
+        },
+        {
+            "label": "Compile GUI (bun)",
+            "type": "shell",
+            "command": "bun run build",
+            "problemMatcher": [],
+            "options": {
+                "cwd": "./gui/"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": false,
+            },
+        },
+        // compile the thing 
+        {
+            "label": "Compile Rust Backend (DEBUG)",
+            "type": "shell",
+            "command": "cargo xtask-debug bundle comprs",
+        },
+        // this build task will compile the React code into some static files,
+        // and then compile the plugin as a release build. when the plugin is compiled as such, it will use the GUI static files
+        {
+            "label": "Compile Plugin (RELEASE)",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Compile GUI (bun)",
+                "Compile Rust Backend (RELEASE)"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+        },
+    ]
+}

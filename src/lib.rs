@@ -1,51 +1,34 @@
-use atomic_float::AtomicF32;
-use dsp::{Compressor, LevelDetectionType};
-use nih_plug::prelude::*;
-use nih_plug_vizia::ViziaState;
-use std::sync::Arc;
 pub mod editor;
+mod enums;
+mod params;
 
-/// The time it takes for the peak meter to decay by 12 dB after switching to complete silence.
-const PEAK_METER_DECAY_MS: f64 = 150.0;
+use dsp::{Compressor, LevelDetectionType};
+use editor::create_editor;
+use nih_plug::prelude::*;
+use params::{
+    CompressorParams, DEFAULT_ATTACK_TIME, DEFAULT_KNEE, DEFAULT_RATIO, DEFAULT_RELEASE_TIME,
+    DEFAULT_THRESHOLD,
+};
 
-/// This is mostly identical to the gain example, minus some fluff, and with a GUI.
+use std::sync::Arc;
+
 pub struct CompressorPlugin {
     compressor: Compressor,
     params: Arc<CompressorParams>,
-    /// Needed to normalize the peak meter's response based on the sample rate.
-    peak_meter_decay_weight: f32,
-    /// The current data for the peak meter. This is stored as an [`Arc`] so we can share it between
-    /// the GUI and the audio processing parts. If you have more state to share, then it's a good
-    /// idea to put all of that in a struct behind a single `Arc`.
-    ///
-    /// This is stored as voltage gain.
-    peak_meter: Arc<AtomicF32>,
-}
-
-#[derive(Params)]
-struct CompressorParams {
-    /// The editor state, saved together with the parameter state so the custom scaling can be
-    /// restored.
-    #[persist = "editor-state"]
-    editor_state: Arc<ViziaState>,
-
-    #[id = "threshold"]
-    pub threshold: FloatParam,
 }
 
 impl Default for CompressorPlugin {
     fn default() -> Self {
-        let threshold = -10.0;
-        let ratio = 100.0;
-        let knee = 0.0;
-        let attack_time = 0.005;
-        let release_time = 0.05;
+        // TODO:
+        // unify with params
+        let threshold = DEFAULT_THRESHOLD;
+        let ratio = DEFAULT_RATIO;
+        let knee = DEFAULT_KNEE;
+        let attack_time = DEFAULT_ATTACK_TIME;
+        let release_time = DEFAULT_RELEASE_TIME;
 
         Self {
             params: Arc::new(CompressorParams::default()),
-
-            peak_meter_decay_weight: 1.0,
-            peak_meter: Arc::new(AtomicF32::new(util::MINUS_INFINITY_DB)),
             compressor: Compressor::new(
                 attack_time,
                 release_time,
@@ -58,41 +41,9 @@ impl Default for CompressorPlugin {
     }
 }
 
-impl Default for CompressorParams {
-    fn default() -> Self {
-        Self {
-            editor_state: editor::default_state(),
-            /*
-            threshold: FloatParam::new(
-                "Threshold",
-                util::db_to_gain(0.0),
-                FloatRange::Skewed {
-                    min: util::db_to_gain(-100.0),
-                    max: util::db_to_gain(10.0),
-                    factor: FloatRange::gain_skew_factor(-100.0, 10.0),
-                },
-            )
-
-            .with_smoother(SmoothingStyle::Logarithmic(50.0))
-            .with_unit(" dB")
-            .with_value_to_string(formatters::v2s_f32_gain_to_db(2))
-            .with_string_to_value(formatters::s2v_f32_gain_to_db()),
-            */
-            threshold: FloatParam::new(
-                "Threshold",
-                0.5,
-                FloatRange::Linear {
-                    min: -100.0,
-                    max: 1.0,
-                },
-            ),
-        }
-    }
-}
-
 impl Plugin for CompressorPlugin {
     const NAME: &'static str = "COMPRS";
-    const VENDOR: &'static str = "DVBP";
+    const VENDOR: &'static str = "DVUB";
     const URL: &'static str = "https://dvub.net";
     const EMAIL: &'static str = "dvubdevs@gmail.com";
 
@@ -120,26 +71,12 @@ impl Plugin for CompressorPlugin {
         self.params.clone()
     }
 
-    fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        editor::create(
-            self.params.clone(),
-            self.peak_meter.clone(),
-            self.params.editor_state.clone(),
-        )
-    }
-
     fn initialize(
         &mut self,
         _audio_io_layout: &AudioIOLayout,
-        buffer_config: &BufferConfig,
+        _buffer_config: &BufferConfig,
         _context: &mut impl InitContext<Self>,
     ) -> bool {
-        // After `PEAK_METER_DECAY_MS` milliseconds of pure silence, the peak meter's value should
-        // have dropped by 12 dB
-        self.peak_meter_decay_weight = 0.25f64
-            .powf((buffer_config.sample_rate as f64 * PEAK_METER_DECAY_MS / 1000.0).recip())
-            as f32;
-
         true
     }
 
@@ -150,48 +87,19 @@ impl Plugin for CompressorPlugin {
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
         for mut channel_samples in buffer.iter_samples() {
-            let mut amplitude = 0.0;
-            let num_samples = channel_samples.len();
             for sample in channel_samples.iter_mut() {
                 *sample = self.compressor.process(*sample).0;
-                amplitude += *sample;
-            }
-            // To save resources, a plugin can (and probably should!) only perform expensive
-            // calculations that are only displayed on the GUI while the GUI is open
-            if self.params.editor_state.is_open() {
-                amplitude = (amplitude / num_samples as f32).abs();
-                let current_peak_meter = self.peak_meter.load(std::sync::atomic::Ordering::Relaxed);
-                let new_peak_meter = if amplitude > current_peak_meter {
-                    amplitude
-                } else {
-                    current_peak_meter * self.peak_meter_decay_weight
-                        + amplitude * (1.0 - self.peak_meter_decay_weight)
-                };
-                self.peak_meter
-                    .store(new_peak_meter, std::sync::atomic::Ordering::Relaxed)
             }
         }
 
         ProcessStatus::Normal
     }
-}
-/*
-impl ClapPlugin for CompressorPlugin {
-    const CLAP_ID: &'static str = "com.dvbp.comprs";
-    const CLAP_DESCRIPTION: Option<&'static str> = Some("...");
-    const CLAP_MANUAL_URL: Option<&'static str> = Some(Self::URL);
-    const CLAP_SUPPORT_URL: Option<&'static str> = None;
-    const CLAP_FEATURES: &'static [ClapFeature] = &[
-        ClapFeature::AudioEffect,
-        ClapFeature::Stereo,
-        ClapFeature::Mono,
-        ClapFeature::Utility,
-    ];
-}
 
-nih_export_clap!(CompressorPlugin);
-*/
-
+    fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
+        let editor = create_editor(self);
+        Some(Box::new(editor))
+    }
+}
 impl Vst3Plugin for CompressorPlugin {
     const VST3_CLASS_ID: [u8; 16] = *b"COMPRSSSSSSSSSSS";
     const VST3_SUBCATEGORIES: &'static [Vst3SubCategory] =

@@ -1,6 +1,7 @@
 use dsp::{Compressor, LevelDetectionType};
 use nih_plug::util::db_to_gain;
 use plotters::prelude::*;
+// TODO: make this a timestamp or something idk
 const OUT_FILE_NAME: &str = "plots/0.png";
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let len = 44_100;
@@ -32,15 +33,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         threshold,
         ratio,
         knee,
-        LevelDetectionType::Simple,
+        LevelDetectionType::Rms,
     );
     let compressed_data: Vec<((f32, f32), f32)> = data
         .iter()
-        .enumerate()
-        .map(|(_i, sample)| {
+        .map(|sample| {
             let result = comp.process(*sample);
-
-            (result, comp.average_gain)
+            (result, comp.get_average_gain())
         })
         .collect();
     let (compression_results, envelopes): ((Vec<f32>, Vec<f32>), Vec<f32>) =

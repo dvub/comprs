@@ -1,0 +1,23 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Open Plugin Host (Test Project)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "preLaunchTask": "Compile Rust Backend (DEBUG)",
+            "program": "C:/ProgramData/Ableton/Live 11 Standard/Program/Ableton Live 11 Standard.exe", // open preferred VST Host
+            "args": [
+                "D:/Music things/LIVESETS/test project Project/test project.als"
+            ], // open our project
+            "cwd": "", // TODO: should this be ${workspaceFolder}?
+            "environment": [],
+            "symbolOptions": {
+                "searchPaths": [
+                    "${workspaceFolder}/target/debug",
+                    "${workspaceFolder}/target/profiling"
+                ],
+            },
+        },
+    ],
+}

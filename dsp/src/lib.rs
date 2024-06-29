@@ -39,8 +39,6 @@ impl RmsLevelDetector {
 }
 /// Variants represent the different types of level detection that the compressor may use to update its internal gain.
 pub enum LevelDetectionType {
-    /// Simply takes the absolute value of the input
-    Simple,
     /// Use RMS of the signal
     Rms,
 }
@@ -48,27 +46,26 @@ pub enum LevelDetectionType {
 pub struct Compressor {
     /// Average input gain *in linear space*.
     /// The method of calculating this average gain is controlled by the `level_detection_type` field.
-    ///
-    pub average_gain: f32,
+    average_gain: f32,
 
     /// The coefficient to apply when the input signal is increasing. This value is computed depending on the type of attack/release (exponential/linear).
-    attack_coefficient: f32,
+    pub attack_coefficient: f32,
 
     /// The filter coefficient to apply when the input signal is decreasing. This value is computed depending on the type of attack/release (exponential/linear).
-    release_coefficient: f32,
+    pub release_coefficient: f32,
 
     /// The threshold at which to begin applying compression **in decibels.**
     /// For example, a compressor with a threshold of -10db would compress signals above -10db.
-    threshold: f32,
+    pub threshold: f32,
 
     /// The compression ratio as the left side of the ratio in decibels.
     /// For example, a ratio of `2.0` would be equivalent to a ratio of 2:1,
     /// which means that for every 2db that the signal is above the `threshold`, 1db will pass through.
-    ratio: f32,
+    pub ratio: f32,
 
     /// The knee width **in decibels**. This smooths the transition between compression and no compression around the threshold.
     /// If you'd like a *hard-knee compressor*, set this value to `0.0`.
-    knee_width: f32,
+    pub knee_width: f32,
 
     /// Keep track of the RMS.
     rms: RmsLevelDetector,
@@ -92,7 +89,6 @@ impl Compressor {
     fn update_gain(&mut self, sample: f32) {
         // choose the input based on the desired level detection method
         let new_gain = match self.level_detection_type {
-            LevelDetectionType::Simple => sample.abs(),
             LevelDetectionType::Rms => self.rms.calculate_rms(sample),
         };
         // based on if our incoming signal is increasing or decreasing, choose the filter coefficent to use.
@@ -103,6 +99,10 @@ impl Compressor {
         };
         // filter to smooth the average gain. this is also a good place to apply our attack and release.
         self.average_gain = (1.0 - theta) * new_gain + theta * self.average_gain;
+    }
+
+    pub fn get_average_gain(&self) -> f32 {
+        self.average_gain
     }
 
     /// This function converts the internal average gain of the compressor to decibels, then uses a soft-knee equation to calculate the gain reduction.
@@ -210,9 +210,9 @@ impl Default for Compressor {
             threshold: 0.0,  // if we're clipping, apply
             ratio: 4.0,      // 4:1 compression
             knee_width: 5.0, // pretty big knee
-            level_detection_type: LevelDetectionType::Simple,
+            level_detection_type: LevelDetectionType::Rms,
         }
     }
 }
 // TODO:
-// make tests half decent
+// make tests... in general
