@@ -1,3 +1,4 @@
+/*
 use dsp::{Compressor, LevelDetectionType};
 use nih_plug::util::db_to_gain;
 use plotters::prelude::*;
@@ -107,3 +108,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Result has been saved to {}", OUT_FILE_NAME);
     Ok(())
 }
+*/
+fn main() {}

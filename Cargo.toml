@@ -18,11 +18,10 @@ atomic_float = "0.1"
 circular-buffer = "0.1.6"
 plotters = "0.3.5"
 rand = "0.8.5"
-dsp = { path = "./dsp" }
 ts-rs = "9.0.1"
 serde = { version = "1.0.203", features = ["derive"] }
 serde_json = "1.0.118"
 nih_plug_webview = { git = "https://github.com/dvub/nih-plug-webview.git" }
 
 [workspace]
-members = ["dsp", "plot", "xtask"]
+members = ["plot", "xtask"]

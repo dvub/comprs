@@ -557,7 +557,6 @@ version = "0.1.0"
 dependencies = [
  "atomic_float",
  "circular-buffer",
- "dsp",
  "nih_plug",
  "nih_plug_webview",
  "plotters",
@@ -884,14 +883,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330c60081dcc4c72131f8eb70510f1ac07223e5d4163db481a04a0befcffa412"
 dependencies = [
  "libloading 0.8.3",
-]
-
-[[package]]
-name = "dsp"
-version = "0.1.0"
-dependencies = [
- "circular-buffer",
- "nih_plug",
 ]
 
 [[package]]
@@ -2454,7 +2445,6 @@ checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
 name = "plot"
 version = "0.1.0"
 dependencies = [
- "dsp",
  "nih_plug",
  "plotters",
 ]

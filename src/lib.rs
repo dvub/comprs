@@ -1,42 +1,23 @@
+mod dsp;
 pub mod editor;
 mod enums;
 mod params;
 
-use dsp::{Compressor, LevelDetectionType};
+use dsp::Compressor;
 use editor::create_editor;
 use nih_plug::prelude::*;
-use params::{
-    CompressorParams, DEFAULT_ATTACK_TIME, DEFAULT_KNEE, DEFAULT_RATIO, DEFAULT_RELEASE_TIME,
-    DEFAULT_THRESHOLD,
-};
+use params::CompressorParams;
 
 use std::sync::Arc;
 
 pub struct CompressorPlugin {
     compressor: Compressor,
-    params: Arc<CompressorParams>,
 }
 
 impl Default for CompressorPlugin {
     fn default() -> Self {
-        // TODO:
-        // unify with params
-        let threshold = DEFAULT_THRESHOLD;
-        let ratio = DEFAULT_RATIO;
-        let knee = DEFAULT_KNEE;
-        let attack_time = DEFAULT_ATTACK_TIME;
-        let release_time = DEFAULT_RELEASE_TIME;
-
         Self {
-            params: Arc::new(CompressorParams::default()),
-            compressor: Compressor::new(
-                attack_time,
-                release_time,
-                threshold,
-                ratio,
-                knee,
-                LevelDetectionType::Rms,
-            ),
+            compressor: Compressor::new(Arc::new(CompressorParams::default())),
         }
     }
 }
@@ -68,7 +49,7 @@ impl Plugin for CompressorPlugin {
     type BackgroundTask = ();
 
     fn params(&self) -> Arc<dyn Params> {
-        self.params.clone()
+        self.compressor.params.clone()
     }
 
     fn initialize(
@@ -88,7 +69,22 @@ impl Plugin for CompressorPlugin {
     ) -> ProcessStatus {
         for mut channel_samples in buffer.iter_samples() {
             for sample in channel_samples.iter_mut() {
-                *sample = self.compressor.process(*sample).0;
+                let dry_wet = self.compressor.params.dry_wet.smoothed.next();
+                let input_gain = self.compressor.params.input_gain.smoothed.next();
+                let output_gain = self.compressor.params.output_gain.smoothed.next();
+                // modify with input gain
+                *sample *= input_gain;
+                // save a dry copy
+                let pre_processed = *sample;
+                // save a wet copy
+                let processed = self.compressor.process(*sample).0;
+                // blend based on dry_wet
+                let mut blended_output = (1.0 - dry_wet) * pre_processed + dry_wet * processed;
+
+                // finally, modify with output gain
+                blended_output *= output_gain;
+                // and we're done!
+                *sample = blended_output;
             }
         }
 

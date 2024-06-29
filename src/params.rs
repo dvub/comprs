@@ -1,36 +1,51 @@
-use std::sync::Arc;
-
 use nih_plug::{
     formatters::{self, v2s_f32_rounded},
     params::{FloatParam, Params},
     prelude::{FloatRange, SmoothingStyle},
+    util,
 };
+use std::sync::Arc;
 
-pub const DEFAULT_THRESHOLD: f32 = 0.0;
+pub const DEFAULT_THRESHOLD: f32 = -10.0;
 pub const DEFAULT_RATIO: f32 = 4.0;
 pub const DEFAULT_KNEE: f32 = 5.0;
 pub const DEFAULT_ATTACK_TIME: f32 = 0.001;
 pub const DEFAULT_RELEASE_TIME: f32 = 0.05;
 
+/// Parameters for compressor.
+/// **NOTE**: In this documentation I've used the term "level" instead of "signal."
+/// This is because compressors may not always use the incoming signal as the value to use in calculations.
+/// An example would instead be using RMS, etc.
 #[derive(Params)]
 pub struct CompressorParams {
+    /// The threshold at which to begin applying compression **in decibels.**
+    /// For example, a compressor with a threshold of -10db would (for the most part) compress when *the level* above -10db.
     #[id = "threshold"]
     pub threshold: FloatParam,
+    /// The compression ratio as the left side of the ratio **in decibels**.
+    /// For example, a ratio of `2.0` would be equivalent to a ratio of 2:1,
+    /// which means that for every 2db that *the level* is above the `threshold`, 1db will pass through.
     #[id = "ratio"]
     pub ratio: FloatParam,
+    /// The time it takes, **in seconds**, before the compressor starts compressing after *the level* is above the threshold.
     #[id = "attack"]
     pub attack_time: FloatParam,
-
+    /// The time it takes, **in seconds**, for the compressor to stop compressing after *the level* falls below the threshold.
     #[id = "release"]
     pub release_time: FloatParam,
-
+    /// The knee width **in decibels**. This smooths the transition between compression and no compression around the threshold.
+    /// If you'd like a *hard-knee compressor*, set this value to `0.0`.
     #[id = "knee"]
     pub knee_width: FloatParam,
-
+    /// Modify the gain of the incoming signal ***before*** compression.
     #[id = "ingain"]
     pub input_gain: FloatParam,
+    /// Modify the gain of the incoming signal ***after*** compression ***AND*** after dry/wet has been applied.
     #[id = "outgain"]
     pub output_gain: FloatParam,
+    /// Blends the pre-compressed signal with the processed, compressed signal.
+    /// `1.0` (100%) means that only the compressed signal will be output,
+    /// while `0.0` (0%) means that essentially, no compression is applied.  
     #[id = "drywet"]
     pub dry_wet: FloatParam,
 }
@@ -113,31 +128,42 @@ impl Default for CompressorParams {
             .with_unit(" dB")
             .with_value_to_string(v2s_f32_rounded(1)),
             // INPUT GAIN
+            // basically, the exact same as this. LOL
+            // https://github.com/robbert-vdh/nih-plug/blob/ffe9b61fcb0441c9d33f4413f5ebe7394637b21f/plugins/examples/gain/src/lib.rs#L67
             input_gain: FloatParam::new(
                 "Input Gain",
-                0.0,
+                util::db_to_gain(0.0),
                 FloatRange::Skewed {
-                    min: -100.0,
-                    max: 10.0,
-                    factor: FloatRange::skew_factor(2.25),
+                    min: util::db_to_gain(-30.0),
+                    max: util::db_to_gain(30.0),
+                    // This makes the range appear as if it was linear when displaying the values as
+                    // decibels
+                    factor: FloatRange::gain_skew_factor(-30.0, 30.0),
                 },
             )
-            .with_smoother(SmoothingStyle::Linear(10.0))
+            // Because the gain parameter is stored as linear gain instead of storing the value as
+            // decibels, we need logarithmic smoothing
+            .with_smoother(SmoothingStyle::Logarithmic(50.0))
             .with_unit(" dB")
-            .with_value_to_string(formatters::v2s_f32_rounded(2)),
+            // There are many predefined formatters we can use here. If the gain was stored as
+            // decibels instead of as a linear gain value, we could have also used the
+            // `.with_step_size(0.1)` function to get internal rounding.
+            .with_value_to_string(formatters::v2s_f32_gain_to_db(2))
+            .with_string_to_value(formatters::s2v_f32_gain_to_db()),
             // OUTPUT GAIN
             output_gain: FloatParam::new(
                 "Output Gain",
-                0.0,
+                util::db_to_gain(0.0),
                 FloatRange::Skewed {
-                    min: -100.0,
-                    max: 10.0,
-                    factor: FloatRange::skew_factor(2.25),
+                    min: util::db_to_gain(-30.0),
+                    max: util::db_to_gain(30.0),
+                    factor: FloatRange::gain_skew_factor(-30.0, 30.0),
                 },
             )
-            .with_smoother(SmoothingStyle::Linear(10.0))
+            .with_smoother(SmoothingStyle::Logarithmic(50.0))
             .with_unit(" dB")
-            .with_value_to_string(formatters::v2s_f32_rounded(2)),
+            .with_value_to_string(formatters::v2s_f32_gain_to_db(2))
+            .with_string_to_value(formatters::s2v_f32_gain_to_db()),
 
             dry_wet: FloatParam::new("Dry/Wet", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 }) // 1.0 default for full compressor effect
                 .with_smoother(SmoothingStyle::Linear(10.0))
