@@ -1,112 +1,138 @@
-import Image from "next/image";
+"use client";
+
+import { DBKnob } from "@/components/knobs/DBKnob";
+import { GenericKnob } from "@/components/knobs/GenericKnob";
+import { NormalisableRange } from "@/lib/utils";
+import React from "react";
 
 export default function Home() {
+  const [rawInputGain, setRawInputGain] = React.useState(0);
+  const [rawOutputGain, setRawOutputGain] = React.useState(0);
+  const [threshold, setThreshold] = React.useState(0);
+  const [ratio, setRatio] = React.useState(0);
+  const [dryWet, setDryWet] = React.useState(0);
+  const [attackTime, setAttackTime] = React.useState(0);
+  const [releaseTime, setReleaseTime] = React.useState(0);
+  const [knee, setKnee] = React.useState(0);
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:size-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <main className="main-bg w-screen h-screen overflow-hidden px-3 py-5 text-[#180619] ">
+      <div className="flex justify-center items-center h-[25%]">
+        <h1 className="font-thin text-7xl">COMPRS</h1>
+      </div>
+      <div className="h-[50%] flex justify-between items-center gap-3">
+        <DBKnob
+          label="IN GAIN"
+          rawValue={rawInputGain}
+          setRawValue={setRawInputGain}
+          minValue={-30}
+          maxValue={30}
+          defaultValue={0}
+        />
+        <div className="flex gap-3 justify-center">
+          <GenericKnob
+            label="THRESH"
+            rawValue={threshold}
+            setRawValue={setThreshold}
+            minValue={-100}
+            maxValue={5}
+            defaultValue={0}
+            range={
+              new NormalisableRange(
+                -100,
+                5,
+                -25 // idk i just kinda chose this tbh
+              )
+            }
+            roundingFn={(valueRaw) => Number(valueRaw.toFixed(2))}
+            displayFn={(valueRaw) => `${Number(valueRaw.toFixed(2))} dB`}
+            size={36}
+          />
+          <div className="w-36 h-36 bg-slate-200"></div>
+          <GenericKnob
+            label="RATIO"
+            rawValue={ratio}
+            setRawValue={setRatio}
+            minValue={1}
+            maxValue={100}
+            defaultValue={4}
+            range={
+              new NormalisableRange(
+                1,
+                100,
+                25 // again, randomly chose
+              )
+            }
+            roundingFn={(valueRaw) => Number(valueRaw.toFixed(2))}
+            displayFn={(valueRaw) => `${Number(valueRaw.toFixed(2))}:1 dB`}
+            size={36}
+          />
+        </div>
+        <div>
+          <GenericKnob
+            label="DRY/WET"
+            rawValue={dryWet}
+            setRawValue={setDryWet}
+            minValue={0}
+            maxValue={1}
+            defaultValue={1}
+            range={new NormalisableRange(0, 1, 0.5)}
+            roundingFn={(valueRaw) => Number(valueRaw.toFixed(2))}
+            displayFn={(valueRaw) => `${Number((valueRaw * 100).toFixed(2))}%`}
+            size={24}
+          />
+          <DBKnob
+            label="OUT GAIN"
+            rawValue={rawOutputGain}
+            setRawValue={setRawOutputGain}
+            minValue={-30}
+            maxValue={30}
+            defaultValue={0}
+          />
         </div>
       </div>
-
-      <div className="relative z-[-1] flex place-items-center before:absolute before:h-[300px] before:w-full before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 sm:before:w-[480px] sm:after:w-[240px] before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:w-full lg:max-w-5xl lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-balance text-sm opacity-50">
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
+      <div className="h-[25%] w-full flex justify-center">
+        <div className="flex gap-3">
+          <GenericKnob
+            label="ATK"
+            rawValue={attackTime}
+            setRawValue={setAttackTime}
+            minValue={0}
+            maxValue={1}
+            defaultValue={0.001}
+            range={new NormalisableRange(0, 1, 0.01)}
+            roundingFn={(valueRaw) => Number(valueRaw.toFixed(3))}
+            displayFn={(valueRaw) =>
+              `${Number((valueRaw * 1000).toFixed(3))}ms`
+            }
+            size={24}
+          />
+          <GenericKnob
+            label="RLS"
+            rawValue={releaseTime}
+            setRawValue={setReleaseTime}
+            minValue={0}
+            maxValue={5}
+            defaultValue={0.05}
+            range={new NormalisableRange(0, 5, 0.5)}
+            roundingFn={(valueRaw) => Number(valueRaw.toFixed(3))}
+            displayFn={(valueRaw) =>
+              `${Number((valueRaw * 1000).toFixed(1))}ms`
+            }
+            size={24}
+          />
+          <GenericKnob
+            label="KNEE"
+            rawValue={knee}
+            setRawValue={setKnee}
+            minValue={0}
+            maxValue={20}
+            defaultValue={5}
+            range={new NormalisableRange(0, 20, 10)}
+            roundingFn={(valueRaw) => Number(valueRaw.toFixed(2))}
+            displayFn={(valueRaw) => `${Number(valueRaw.toFixed(2))} dB`}
+            size={24}
+          />
+        </div>
       </div>
     </main>
   );

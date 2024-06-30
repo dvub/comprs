@@ -8,7 +8,7 @@ pub fn create_editor(_plugin: &mut CompressorPlugin) -> WebViewEditor {
     // let params = plugin.params.clone();
     // let gain_value_changed = plugin.params.gain_value_changed.clone();
 
-    let size = (300, 450);
+    let size = (750, 500);
 
     #[cfg(debug_assertions)]
     let src = HTMLSource::URL("http://localhost:3000".to_owned());
