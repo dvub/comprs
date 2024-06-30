@@ -10,6 +10,9 @@ use params::CompressorParams;
 
 use std::sync::Arc;
 
+// todo:
+// it kinda sounds lame LOL
+
 pub struct CompressorPlugin {
     compressor: Compressor,
 }
