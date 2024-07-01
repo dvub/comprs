@@ -5,7 +5,7 @@
  */
 
 import clsx from "clsx";
-import { useId, useState } from "react";
+import { useId } from "react";
 import {
   KnobHeadless,
   KnobHeadlessLabel,
@@ -14,7 +14,8 @@ import {
 } from "react-knob-headless";
 import { mapFrom01Linear, mapTo01Linear } from "@dsp-ts/math";
 import { KnobBaseThumb } from "./KnobBaseThumb";
-import { sendToPlugin } from "../../lib";
+import { sendToPlugin } from "../lib";
+import { NormalisableRange } from "@/lib/utils";
 
 type KnobHeadlessProps = React.ComponentProps<typeof KnobHeadless>;
 type KnobBaseThumbProps = React.ComponentProps<typeof KnobBaseThumb>;
@@ -35,10 +36,12 @@ type KnobBaseProps = Pick<
   rawValue: number;
   setRawValue: React.Dispatch<React.SetStateAction<number>>;
   size: number;
+  range: NormalisableRange;
 };
 
 export function KnobBase({
   label,
+  range,
   valueDefault,
   valueMin,
   valueMax,
@@ -67,6 +70,7 @@ export function KnobBase({
     stepLarger,
     onValueRawChange: setVal,
   });
+  // step functions are for keyboard control
 
   // in addition to changing the state,
   // we want to also send a message to the plugin backend here
@@ -89,7 +93,8 @@ export function KnobBase({
       <KnobHeadless
         id={knobId}
         aria-labelledby={labelId}
-        className={`relative w-${size} h-${size} outline-none`}
+        className={`relative outline-none`}
+        style={{ width: `${size}px`, height: `${size}px` }}
         valueMin={valueMin}
         valueMax={valueMax}
         valueRaw={rawValue}
@@ -108,10 +113,7 @@ export function KnobBase({
           resetValue={resetValue}
         />
       </KnobHeadless>
-      <KnobHeadlessOutput
-        htmlFor={knobId}
-        onClick={(e) => console.log("clicked!")}
-      >
+      <KnobHeadlessOutput htmlFor={knobId}>
         {/* TODO: ADD <input> HERE */}
         {valueRawDisplayFn(rawValue)}
       </KnobHeadlessOutput>
