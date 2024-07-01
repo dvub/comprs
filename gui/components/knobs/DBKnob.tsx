@@ -8,12 +8,14 @@
 import { NormalisableRange, dbToGain, gainToDb } from "@/lib/utils";
 import { KnobBase } from "../KnobBase";
 import { useState } from "react";
+import { Action } from "@/bindings/Action";
 
 export function DBKnob(props: {
   label: string;
   minValue: number;
   maxValue: number;
   defaultValue: number;
+  type: Action["type"];
 }) {
   const { label, minValue, maxValue, defaultValue } = props;
 
@@ -48,6 +50,7 @@ export function DBKnob(props: {
       valueRawDisplayFn={valueRawDisplayFn}
       size={96}
       range={normalisableRange}
+      type={props.type}
     />
   );
 }

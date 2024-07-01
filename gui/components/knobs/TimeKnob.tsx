@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { KnobBase } from "../KnobBase";
 import { NormalisableRange } from "@/lib/utils";
+import { Action } from "@/bindings/Action";
 
 export function TimeKnob(props: {
   label: string;
@@ -8,6 +9,7 @@ export function TimeKnob(props: {
   minValue: number;
   defaultValue: number;
   range: NormalisableRange;
+  type: Action["type"];
 }) {
   const { label, maxValue, minValue, defaultValue, range } = props;
   const [value, setValue] = useState(defaultValue);
@@ -35,6 +37,7 @@ export function TimeKnob(props: {
       size={96}
       stepFn={(valueRaw: number): number => 0}
       stepLargerFn={(valueRaw: number): number => 0}
+      type={props.type}
     />
   );
 }

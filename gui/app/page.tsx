@@ -17,7 +17,13 @@ export default function Home() {
         <h1 className="font-thin text-7xl">COMPRS</h1>
       </div>
       <div className="h-[50%] flex justify-between items-center gap-3">
-        <DBKnob label="IN" maxValue={30} minValue={-30} defaultValue={0} />
+        <DBKnob
+          label="IN"
+          maxValue={30}
+          minValue={-30}
+          defaultValue={0}
+          type="InputGain"
+        />
         {/* middle section, contains [IMO] the most important parameters */}
         <div className="flex gap-3 justify-center">
           <ThresholdKnob />
@@ -27,7 +33,13 @@ export default function Home() {
         {/* this div contains output-related knobs */}
         <div>
           <DryWetKnob />
-          <DBKnob label="OUT" maxValue={30} minValue={-30} defaultValue={0} />
+          <DBKnob
+            label="OUT"
+            maxValue={30}
+            minValue={-30}
+            defaultValue={0}
+            type="OutputGain"
+          />
         </div>
       </div>
       {/* bottom section, just kinda put misc params here */}
@@ -39,6 +51,7 @@ export default function Home() {
             maxValue={1}
             defaultValue={0.001}
             range={new NormalisableRange(0, 1, 0.01)}
+            type="AttackTime"
           />
           <TimeKnob
             label="RLS"
@@ -46,6 +59,7 @@ export default function Home() {
             maxValue={5}
             defaultValue={0.05}
             range={new NormalisableRange(0, 5, 0.5)}
+            type="ReleaseTime"
           />
           <KneeKnob />
         </div>

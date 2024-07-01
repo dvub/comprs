@@ -16,6 +16,7 @@ import { mapFrom01Linear, mapTo01Linear } from "@dsp-ts/math";
 import { KnobBaseThumb } from "./KnobBaseThumb";
 import { sendToPlugin } from "../lib";
 import { NormalisableRange } from "@/lib/utils";
+import { Action } from "@/bindings/Action";
 
 type KnobHeadlessProps = React.ComponentProps<typeof KnobHeadless>;
 type KnobBaseThumbProps = React.ComponentProps<typeof KnobBaseThumb>;
@@ -37,11 +38,11 @@ type KnobBaseProps = Pick<
   setRawValue: React.Dispatch<React.SetStateAction<number>>;
   size: number;
   range: NormalisableRange;
+  type: Action["type"];
 };
 
 export function KnobBase({
   label,
-  range,
   valueDefault,
   valueMin,
   valueMax,
@@ -53,6 +54,7 @@ export function KnobBase({
   rawValue,
   setRawValue,
   size,
+  type,
   mapTo01 = mapTo01Linear,
   mapFrom01 = mapFrom01Linear,
 }: KnobBaseProps) {
@@ -76,7 +78,7 @@ export function KnobBase({
   // we want to also send a message to the plugin backend here
   function setVal(valueRaw: number) {
     setRawValue(valueRaw);
-    sendToPlugin({ type: "SetGain", value: valueRaw });
+    sendToPlugin({ type: type, value: valueRaw });
   }
 
   function resetValue() {

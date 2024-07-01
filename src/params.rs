@@ -4,13 +4,34 @@ use nih_plug::{
     prelude::{FloatRange, SmoothingStyle},
     util,
 };
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use ts_rs::TS;
 
 pub const DEFAULT_THRESHOLD: f32 = -10.0;
 pub const DEFAULT_RATIO: f32 = 4.0;
 pub const DEFAULT_KNEE: f32 = 5.0;
 pub const DEFAULT_ATTACK_TIME: f32 = 0.001;
 pub const DEFAULT_RELEASE_TIME: f32 = 0.05;
+
+// "Run Test" (at least, in vscode) will (re-) generate the TS bindings
+#[derive(Deserialize, TS, Serialize)]
+#[ts(export_to = "../gui/bindings/Action.ts")]
+#[ts(export)]
+#[serde(tag = "type")]
+pub enum ParameterType {
+    Ratio { value: f32 },
+    Threshold { value: f32 },
+    AttackTime { value: f32 },
+    ReleaseTime { value: f32 },
+    KneeWidth { value: f32 },
+    InputGain { value: f32 },
+    OutputGain { value: f32 },
+    DryWet { value: f32 },
+}
+use crate::params::ParameterType::*;
+// note: IF I could, I would just get rid of the enum above and then simply export this struct.
+// however, the CompressorParams struct uses FloatParam which doesn't derive the traits I need. :/
 
 /// Parameters for compressor.
 /// **NOTE**: In this documentation I've used the term "level" instead of "signal."
@@ -48,6 +69,21 @@ pub struct CompressorParams {
     /// while `0.0` (0%) means that essentially, no compression is applied.  
     #[id = "drywet"]
     pub dry_wet: FloatParam,
+}
+
+impl CompressorParams {
+    pub fn get_param(&self, action: ParameterType) -> (&FloatParam, f32) {
+        match action {
+            Ratio { value } => (&self.ratio, value),
+            Threshold { value } => (&self.threshold, value),
+            AttackTime { value } => (&self.attack_time, value),
+            ReleaseTime { value } => (&self.release_time, value),
+            KneeWidth { value } => (&self.knee_width, value),
+            InputGain { value } => (&self.input_gain, value),
+            OutputGain { value } => (&self.output_gain, value),
+            DryWet { value } => (&self.dry_wet, value),
+        }
+    }
 }
 
 impl Default for CompressorParams {

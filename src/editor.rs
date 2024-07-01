@@ -4,10 +4,8 @@ use nih_plug_webview::{
 
 use crate::CompressorPlugin;
 
-pub fn create_editor(_plugin: &mut CompressorPlugin) -> WebViewEditor {
-    // let params = plugin.params.clone();
-    // let gain_value_changed = plugin.params.gain_value_changed.clone();
-
+pub fn create_editor(plugin: &mut CompressorPlugin) -> WebViewEditor {
+    let params = plugin.compressor.params.clone();
     let size = (750, 500);
 
     #[cfg(debug_assertions)]
@@ -49,32 +47,17 @@ pub fn create_editor(_plugin: &mut CompressorPlugin) -> WebViewEditor {
             _ => EventStatus::Ignored,
         })
         .with_event_loop(move |ctx, setter, _window| {
-            /*
-            let mut sent_from_gui = false;
             while let Ok(value) = ctx.next_event() {
+                println!("{}", value);
                 if let Ok(action) = serde_json::from_value(value) {
-                    #[allow(clippy::single_match)]
-                    match action {
-                        Action::SetGain { value } => {
-                            sent_from_gui = true;
-                            setter.begin_set_parameter(&params.gain);
-                            setter.set_parameter(&params.gain, value);
-                            setter.end_set_parameter(&params.gain);
-                        }
-                    }
+                    let (param, value) = params.get_param(action);
+                    setter.begin_set_parameter(param);
+                    setter.set_parameter(param, value);
+                    setter.end_set_parameter(param);
                 } else {
-                    panic!("Invalid action received from web UI.")
+                    println!("Received a funky guy");
                 }
             }
-
-            if !sent_from_gui && gain_value_changed.swap(false, Ordering::Relaxed) {
-                let data = PluginMessage::ParamChange {
-                    param: "gain".to_owned(),
-                    value: params.gain.value(),
-                };
-                let _ = ctx.send_json(json!(data));
-            }
-             */
         });
     editor
 }
