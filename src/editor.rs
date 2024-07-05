@@ -6,6 +6,8 @@ use crate::CompressorPlugin;
 
 pub fn create_editor(plugin: &mut CompressorPlugin) -> WebViewEditor {
     let params = plugin.compressor.params.clone();
+    let changed = plugin.compressor.params.changed_params.clone();
+
     let size = (750, 500);
 
     #[cfg(debug_assertions)]
@@ -47,8 +49,8 @@ pub fn create_editor(plugin: &mut CompressorPlugin) -> WebViewEditor {
             _ => EventStatus::Ignored,
         })
         .with_event_loop(move |ctx, setter, _window| {
+            // receive incoming events from GUI
             while let Ok(value) = ctx.next_event() {
-                println!("{}", value);
                 if let Ok(action) = serde_json::from_value(value) {
                     let (param, value) = params.get_param(action);
                     setter.begin_set_parameter(param);
@@ -58,6 +60,14 @@ pub fn create_editor(plugin: &mut CompressorPlugin) -> WebViewEditor {
                     println!("Received a funky guy");
                 }
             }
+            // now, send new events to GUI
+            // todo
+            println!("{}", changed);
+            for p in changed.lock().unwrap().iter() {
+                println!("{:?}", p);
+            }
+            // once we've consumed the values, we can clear the vec until later
+            changed.lock().unwrap().clear();
         });
     editor
 }

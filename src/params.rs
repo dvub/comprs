@@ -1,3 +1,4 @@
+use crate::params::ParameterType::*;
 use nih_plug::{
     formatters::{self, v2s_f32_rounded},
     params::{FloatParam, Params},
@@ -5,7 +6,7 @@ use nih_plug::{
     util,
 };
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use ts_rs::TS;
 
 pub const DEFAULT_THRESHOLD: f32 = -10.0;
@@ -15,7 +16,7 @@ pub const DEFAULT_ATTACK_TIME: f32 = 0.001;
 pub const DEFAULT_RELEASE_TIME: f32 = 0.05;
 
 // "Run Test" (at least, in vscode) will (re-) generate the TS bindings
-#[derive(Deserialize, TS, Serialize)]
+#[derive(Deserialize, TS, Serialize, Debug, Clone, PartialEq)]
 #[ts(export_to = "../gui/bindings/Action.ts")]
 #[ts(export)]
 #[serde(tag = "type")]
@@ -29,7 +30,22 @@ pub enum ParameterType {
     OutputGain { value: f32 },
     DryWet { value: f32 },
 }
-use crate::params::ParameterType::*;
+fn remove_existing(parameters: &mut Vec<ParameterType>, variant_type: &ParameterType) {
+    parameters.retain(|param| {
+        !matches!(
+            (param, &variant_type),
+            (ParameterType::Ratio { .. }, ParameterType::Ratio { .. })
+                | (Threshold { .. }, Threshold { .. })
+                | (AttackTime { .. }, AttackTime { .. })
+                | (ReleaseTime { .. }, ReleaseTime { .. })
+                | (KneeWidth { .. }, KneeWidth { .. })
+                | (InputGain { .. }, InputGain { .. })
+                | (OutputGain { .. }, OutputGain { .. })
+                | (DryWet { .. }, DryWet { .. })
+        )
+    });
+}
+
 // note: IF I could, I would just get rid of the enum above and then simply export this struct.
 // however, the CompressorParams struct uses FloatParam which doesn't derive the traits I need. :/
 
@@ -39,6 +55,8 @@ use crate::params::ParameterType::*;
 /// An example would instead be using RMS, etc.
 #[derive(Params)]
 pub struct CompressorParams {
+    pub changed_params: Arc<Mutex<Vec<ParameterType>>>,
+
     /// The threshold at which to begin applying compression **in decibels.**
     /// For example, a compressor with a threshold of -10db would (for the most part) compress when *the level* above -10db.
     #[id = "threshold"]
@@ -88,6 +106,20 @@ impl CompressorParams {
 
 impl Default for CompressorParams {
     fn default() -> Self {
+        let changed_params = Arc::new(Mutex::new(Vec::with_capacity(100))); // capacity of 100 is probably going to be problematic in the future lol
+        let changed_params_clone = changed_params.clone();
+
+        let threshold_callback = Arc::new(move |value: f32| {
+            // create an enum variant from the value
+            let new_event = Threshold { value };
+            let mut lock = changed_params_clone.lock().unwrap(); // TODO: don't unwrap lol
+
+            // now we need to find and remove old parameter events with the same enum variant
+            remove_existing(&mut lock, &new_event);
+            // now we are ready to add the new value
+            lock.push(new_event);
+        });
+
         // I mostly just played around with other compressors and got a feel for their paramters
         // I spent way too much time tuning these
         Self {
@@ -107,7 +139,8 @@ impl Default for CompressorParams {
             .with_unit(" dB")
             // TODO:
             // create a custom formatter for -inf dB
-            .with_value_to_string(formatters::v2s_f32_rounded(2)),
+            .with_value_to_string(formatters::v2s_f32_rounded(2))
+            .with_callback(threshold_callback),
             // TODO:
             // do we need string_to_value..?
 
@@ -205,6 +238,7 @@ impl Default for CompressorParams {
                 .with_smoother(SmoothingStyle::Linear(10.0))
                 .with_unit("%")
                 .with_value_to_string(v2s_rounded_multiplied(1, 100.0)),
+            changed_params,
         }
     }
 }
@@ -224,4 +258,30 @@ pub fn v2s_rounded_multiplied(
             format!("{v:.digits$}")
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{remove_existing, ParameterType};
+    #[test]
+    fn push_new_event() {
+        let attack1 = ParameterType::AttackTime { value: 20.0 };
+        let release1 = ParameterType::ReleaseTime { value: 1.0 };
+        let mut v = vec![attack1, release1];
+        let c = v.clone();
+        let new_val = ParameterType::Threshold { value: 2.0 };
+        remove_existing(&mut v, &new_val);
+        assert_eq!(v, c)
+    }
+    #[test]
+    fn push_existing_event() {
+        let attack1 = ParameterType::AttackTime { value: 20.0 };
+        let attack2 = ParameterType::AttackTime { value: 21.5 };
+        let release1 = ParameterType::ReleaseTime { value: 1.0 };
+        let mut v = vec![attack1.clone(), attack2.clone(), release1.clone()];
+        let new_val = ParameterType::AttackTime { value: 2.0 };
+        remove_existing(&mut v, &new_val);
+        v.push(new_val.clone());
+        assert_eq!(v, vec![release1, new_val])
+    }
 }
