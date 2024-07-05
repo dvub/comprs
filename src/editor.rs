@@ -73,14 +73,15 @@ pub fn create_editor(plugin: &mut CompressorPlugin) -> WebViewEditor {
 
             // 2. handle parameter updates from DAW (stuff like automation, etc)
             // these need to be sent to the GUI!!
-            let mut param_update_buf_lock = param_update_buf.lock().unwrap();
-            for event in tmp {
-                param_update_buf_lock.retain(|x| discriminant(x) != discriminant(&event));
-            }
 
             // 2a.
             // remove GUI events from event buffer
             // we don't want to receive GUI events just to send them back to the GUI!!
+            let mut param_update_buf_lock = param_update_buf.lock().unwrap();
+            // TODO: refactor
+            for event in tmp {
+                param_update_buf_lock.retain(|x| discriminant(x) != discriminant(&event));
+            }
 
             for event in param_update_buf_lock.iter() {
                 ctx.send_json(json!(event))
