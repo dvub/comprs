@@ -8,7 +8,7 @@ import { PluginMessage } from "@/bindings/PluginMessage";
 declare global {
   interface Window {
     ipc: { postMessage: (message: string) => void };
-    onPluginMessage: (message: PluginMessage) => void;
+    onPluginMessage: (message: Action) => void;
   }
 }
 /*

@@ -5,10 +5,11 @@ import { TimeKnob } from "@/components/knobs/TimeKnob";
 import { RatioKnob } from "@/components/knobs/RatioKnob";
 import { ThresholdKnob } from "@/components/knobs/ThresholdKnob";
 import { NormalisableRange } from "@/lib/utils";
-import React from "react";
+import React, { useEffect } from "react";
 import { DryWetKnob } from "@/components/knobs/DryWetKnob";
 import { KneeKnob } from "@/components/knobs/KneeKnob";
 import { DBKnob } from "@/components/knobs/DBKnob";
+import { Action } from "@/bindings/Action";
 
 export default function Home() {
   return (

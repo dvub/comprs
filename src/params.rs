@@ -6,7 +6,10 @@ use nih_plug::{
     util,
 };
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+use std::{
+    mem::discriminant,
+    sync::{Arc, Mutex},
+};
 use ts_rs::TS;
 
 pub const DEFAULT_THRESHOLD: f32 = -10.0;
@@ -29,21 +32,6 @@ pub enum ParameterType {
     InputGain { value: f32 },
     OutputGain { value: f32 },
     DryWet { value: f32 },
-}
-fn remove_existing(parameters: &mut Vec<ParameterType>, variant_type: &ParameterType) {
-    parameters.retain(|param| {
-        !matches!(
-            (param, &variant_type),
-            (ParameterType::Ratio { .. }, ParameterType::Ratio { .. })
-                | (Threshold { .. }, Threshold { .. })
-                | (AttackTime { .. }, AttackTime { .. })
-                | (ReleaseTime { .. }, ReleaseTime { .. })
-                | (KneeWidth { .. }, KneeWidth { .. })
-                | (InputGain { .. }, InputGain { .. })
-                | (OutputGain { .. }, OutputGain { .. })
-                | (DryWet { .. }, DryWet { .. })
-        )
-    });
 }
 
 // note: IF I could, I would just get rid of the enum above and then simply export this struct.
@@ -90,23 +78,23 @@ pub struct CompressorParams {
 }
 
 impl CompressorParams {
-    pub fn get_param(&self, action: ParameterType) -> (&FloatParam, f32) {
+    pub fn get_param(&self, action: &ParameterType) -> (&FloatParam, f32) {
         match action {
-            Ratio { value } => (&self.ratio, value),
-            Threshold { value } => (&self.threshold, value),
-            AttackTime { value } => (&self.attack_time, value),
-            ReleaseTime { value } => (&self.release_time, value),
-            KneeWidth { value } => (&self.knee_width, value),
-            InputGain { value } => (&self.input_gain, value),
-            OutputGain { value } => (&self.output_gain, value),
-            DryWet { value } => (&self.dry_wet, value),
+            Ratio { value } => (&self.ratio, *value),
+            Threshold { value } => (&self.threshold, *value),
+            AttackTime { value } => (&self.attack_time, *value),
+            ReleaseTime { value } => (&self.release_time, *value),
+            KneeWidth { value } => (&self.knee_width, *value),
+            InputGain { value } => (&self.input_gain, *value),
+            OutputGain { value } => (&self.output_gain, *value),
+            DryWet { value } => (&self.dry_wet, *value),
         }
     }
 }
 
 impl Default for CompressorParams {
     fn default() -> Self {
-        let changed_params = Arc::new(Mutex::new(Vec::with_capacity(100))); // capacity of 100 is probably going to be problematic in the future lol
+        let changed_params = Arc::new(Mutex::new(Vec::with_capacity(8))); // capacity is probably going to be problematic in the future lol
         let changed_params_clone = changed_params.clone();
 
         let threshold_callback = Arc::new(move |value: f32| {
@@ -115,7 +103,7 @@ impl Default for CompressorParams {
             let mut lock = changed_params_clone.lock().unwrap(); // TODO: don't unwrap lol
 
             // now we need to find and remove old parameter events with the same enum variant
-            remove_existing(&mut lock, &new_event);
+            lock.retain(|event| discriminant(event) != discriminant(&new_event));
             // now we are ready to add the new value
             lock.push(new_event);
         });
@@ -258,30 +246,4 @@ pub fn v2s_rounded_multiplied(
             format!("{v:.digits$}")
         }
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{remove_existing, ParameterType};
-    #[test]
-    fn push_new_event() {
-        let attack1 = ParameterType::AttackTime { value: 20.0 };
-        let release1 = ParameterType::ReleaseTime { value: 1.0 };
-        let mut v = vec![attack1, release1];
-        let c = v.clone();
-        let new_val = ParameterType::Threshold { value: 2.0 };
-        remove_existing(&mut v, &new_val);
-        assert_eq!(v, c)
-    }
-    #[test]
-    fn push_existing_event() {
-        let attack1 = ParameterType::AttackTime { value: 20.0 };
-        let attack2 = ParameterType::AttackTime { value: 21.5 };
-        let release1 = ParameterType::ReleaseTime { value: 1.0 };
-        let mut v = vec![attack1.clone(), attack2.clone(), release1.clone()];
-        let new_val = ParameterType::AttackTime { value: 2.0 };
-        remove_existing(&mut v, &new_val);
-        v.push(new_val.clone());
-        assert_eq!(v, vec![release1, new_val])
-    }
 }

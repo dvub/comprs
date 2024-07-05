@@ -5,7 +5,7 @@
  */
 
 import clsx from "clsx";
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import {
   KnobHeadless,
   KnobHeadlessLabel,
@@ -84,6 +84,12 @@ export function KnobBase({
   function resetValue() {
     setVal(valueDefault);
   }
+  window.onPluginMessage = (m: Action) => {
+    if (m.type === type) {
+      console.log(m.type, m.value);
+    }
+    setRawValue(m.value);
+  };
   return (
     <div
       className={clsx(
