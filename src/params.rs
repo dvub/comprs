@@ -96,12 +96,21 @@ impl Default for CompressorParams {
     fn default() -> Self {
         let changed_params = Arc::new(Mutex::new(Vec::with_capacity(8))); // capacity is probably going to be problematic in the future lol
         let changed_params_clone = changed_params.clone();
-
         // need something like this
         // fn a(p: &ParameterType) {}
         let threshold_callback = Arc::new(move |value: f32| {
             // create an enum variant from the value
             let new_event = Threshold { value };
+            let mut lock = changed_params_clone.lock().unwrap(); // TODO: don't unwrap lol
+
+            // now we need to find and remove old parameter events with the same enum variant
+            lock.retain(|event| discriminant(event) != discriminant(&new_event));
+            // now we are ready to add the new value
+            lock.push(new_event);
+        });
+        let ratio_callback = Arc::new(move |value: f32| {
+            // create an enum variant from the value
+            let new_event = Ratio { value };
             let mut lock = changed_params_clone.lock().unwrap(); // TODO: don't unwrap lol
 
             // now we need to find and remove old parameter events with the same enum variant

@@ -87,8 +87,8 @@ export function KnobBase({
   window.onPluginMessage = (m: Action) => {
     if (m.type === type) {
       console.log(m.type, m.value);
+      setRawValue(m.value);
     }
-    setRawValue(m.value);
   };
   return (
     <div
