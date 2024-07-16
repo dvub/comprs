@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { KnobBase } from "../KnobBase";
+import { KnobBase } from "../../KnobBase";
 import { NormalisableRange } from "@/lib/utils";
 import { Action } from "@/bindings/Action";
 
@@ -14,6 +14,8 @@ export function TimeKnob(props: {
   const { label, maxValue, minValue, defaultValue, range } = props;
   const [value, setValue] = useState(defaultValue);
 
+  // the sauce of this component
+  // LOL
   const displayFn = (valueRaw: number) => {
     let multiplier = 1;
     let unit = " s";
@@ -26,7 +28,7 @@ export function TimeKnob(props: {
   return (
     <KnobBase
       label={label}
-      rawValue={value}
+      valueRaw={value}
       setRawValue={setValue}
       valueMin={minValue}
       valueMax={maxValue}

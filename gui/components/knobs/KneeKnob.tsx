@@ -7,7 +7,7 @@ export function KneeKnob() {
   return (
     <KnobBase
       label="KNEE"
-      rawValue={knee}
+      valueRaw={knee}
       setRawValue={setKnee}
       valueMin={0}
       valueMax={20}

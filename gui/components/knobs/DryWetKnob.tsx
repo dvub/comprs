@@ -7,7 +7,7 @@ export function DryWetKnob() {
   return (
     <KnobBase
       label="DRY/WET"
-      rawValue={dryWet}
+      valueRaw={dryWet}
       setRawValue={setDryWet}
       valueMin={0}
       valueMax={1}

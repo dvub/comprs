@@ -7,7 +7,7 @@ export function ThresholdKnob() {
   return (
     <KnobBase
       label="THRESH"
-      rawValue={threshold}
+      valueRaw={threshold}
       setRawValue={setThreshold}
       valueMin={-100}
       valueMax={5}

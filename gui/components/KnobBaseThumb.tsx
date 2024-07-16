@@ -1,11 +1,13 @@
+// TODO:
+// allow user to type in values, maybe through some sort of form, i don't know
+
 /**
  * Modified knob thumb -
  * original source:
  * https://github.com/satelllte/react-knob-headless/blob/main/apps/docs/src/components/knobs/KnobBaseThumb.tsx
  */
-import clsx from "clsx";
+
 import { mapFrom01Linear } from "@dsp-ts/math";
-import { useRef } from "react";
 
 type KnobBaseThumbProps = {
   readonly resetValue: () => void;
@@ -18,6 +20,7 @@ export function KnobBaseThumb({
   label,
   value01,
 }: KnobBaseThumbProps) {
+  // when the element is double-clicked, we want to call whatever function was passed to reset the knob
   function handleClick(event: { detail: number }) {
     if (event.detail === 2) {
       resetValue();

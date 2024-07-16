@@ -9,7 +9,6 @@ import clsx from "clsx";
 import { useEffect, useId } from "react";
 import {
   KnobHeadless,
-  KnobHeadlessLabel,
   KnobHeadlessOutput,
   useKnobKeyboardControls,
 } from "react-knob-headless";
@@ -20,62 +19,65 @@ import { NormalisableRange } from "@/lib/utils";
 import { Action } from "@/bindings/Action";
 
 type KnobHeadlessProps = React.ComponentProps<typeof KnobHeadless>;
-type KnobBaseThumbProps = React.ComponentProps<typeof KnobBaseThumb>;
+
 type KnobBaseProps = Pick<
   KnobHeadlessProps,
   | "valueMin"
   | "valueMax"
+  | "valueRaw"
   | "valueRawRoundFn"
   | "valueRawDisplayFn"
   | "orientation"
   | "mapTo01"
   | "mapFrom01"
 > & {
-  readonly label: string;
-  readonly valueDefault: number;
-  readonly stepFn: (valueRaw: number) => number;
-  readonly stepLargerFn: (valueRaw: number) => number;
-  rawValue: number;
+  label: string;
+  valueDefault: number;
+  stepFn: (valueRaw: number) => number;
+  stepLargerFn: (valueRaw: number) => number;
   setRawValue: React.Dispatch<React.SetStateAction<number>>;
   size: number;
   range: NormalisableRange;
   type: Action["type"];
 };
 
-export function KnobBase({
-  label,
-  valueDefault,
-  valueMin,
-  valueMax,
-  valueRawRoundFn,
-  valueRawDisplayFn,
-  orientation,
-  stepFn,
-  stepLargerFn,
-  rawValue,
-  setRawValue,
-  size,
-  type,
-  mapTo01 = mapTo01Linear,
-  mapFrom01 = mapFrom01Linear,
-}: KnobBaseProps) {
-  const knobId = useId();
-  const labelId = useId();
-  const value01 = mapTo01(rawValue, valueMin, valueMax);
-  const step = stepFn(rawValue);
-  const stepLarger = stepLargerFn(rawValue);
+export function KnobBase(props: KnobBaseProps) {
+  // this value can be tweaked to adjust the feel of the knob
   const dragSensitivity = 0.003;
-  const keyboardControlHandlers = useKnobKeyboardControls({
-    valueRaw: rawValue,
+
+  let {
+    label,
+    valueDefault,
     valueMin,
     valueMax,
-    step,
-    stepLarger,
+    valueRawDisplayFn,
+    stepFn,
+    stepLargerFn,
+    setRawValue,
+    size,
+    type,
+    mapTo01 = mapTo01Linear,
+    mapFrom01 = mapFrom01Linear,
+    valueRaw,
+  } = props;
+
+  const knobId = useId();
+  const labelId = useId();
+  const keyboardControlHandlers = useKnobKeyboardControls({
+    valueRaw: valueRaw,
+    valueMin,
+    valueMax,
+    step: stepFn(valueRaw),
+    stepLarger: stepLargerFn(valueRaw),
     onValueRawChange: setVal,
   });
 
+  // listen for DAW parameter events and update state
   useEffect(() => {
+    // NOTE:
+    // here's im using `any` because addEventListener will complain otherwise
     const handlePluginMessage = (event: any) => {
+      // to get some type safety back, we can add Action here
       let message: Action = event.detail;
       if (message.type === type) {
         setRawValue(message.value);
@@ -88,8 +90,6 @@ export function KnobBase({
     };
   }, []);
 
-  // step functions are for keyboard control
-
   // in addition to changing the state,
   // we want to also send a message to the plugin backend here
   function setVal(valueRaw: number) {
@@ -100,6 +100,12 @@ export function KnobBase({
   function resetValue() {
     setVal(valueDefault);
   }
+
+  let thumbProps = {
+    value01: mapTo01(valueRaw, valueMin, valueMax),
+    label: label,
+    resetValue: resetValue,
+  };
 
   return (
     <div
@@ -114,27 +120,17 @@ export function KnobBase({
         aria-labelledby={labelId}
         className={`relative outline-none`}
         style={{ width: `${size}px`, height: `${size}px` }}
-        valueMin={valueMin}
-        valueMax={valueMax}
-        valueRaw={rawValue}
-        valueRawRoundFn={valueRawRoundFn}
-        valueRawDisplayFn={valueRawDisplayFn}
         dragSensitivity={dragSensitivity}
-        orientation={orientation}
         mapTo01={mapTo01}
         mapFrom01={mapFrom01}
         onValueRawChange={setVal}
+        {...props}
         {...keyboardControlHandlers}
       >
-        <KnobBaseThumb
-          value01={value01}
-          label={label}
-          resetValue={resetValue}
-        />
+        <KnobBaseThumb {...thumbProps} />
       </KnobHeadless>
       <KnobHeadlessOutput htmlFor={knobId}>
-        {/* TODO: ADD <input> HERE */}
-        {valueRawDisplayFn(rawValue)}
+        {valueRawDisplayFn(valueRaw)}
       </KnobHeadlessOutput>
     </div>
   );

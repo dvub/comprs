@@ -7,7 +7,7 @@ export function RatioKnob() {
   return (
     <KnobBase
       label="RATIO"
-      rawValue={ratio}
+      valueRaw={ratio}
       setRawValue={setRatio}
       valueMin={1}
       valueMax={100}

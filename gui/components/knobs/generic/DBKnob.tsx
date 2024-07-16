@@ -6,7 +6,7 @@
  */
 
 import { NormalisableRange, dbToGain, gainToDb } from "@/lib/utils";
-import { KnobBase } from "../KnobBase";
+import { KnobBase } from "../../KnobBase";
 import { useState } from "react";
 import { Action } from "@/bindings/Action";
 
@@ -38,7 +38,7 @@ export function DBKnob(props: {
 
   return (
     <KnobBase
-      rawValue={gain}
+      valueRaw={gain}
       setRawValue={setGain}
       label={label}
       valueDefault={valueDefault}
