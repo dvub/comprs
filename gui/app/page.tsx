@@ -12,6 +12,10 @@ import { DBKnob } from "@/components/knobs/DBKnob";
 import { Action } from "@/bindings/Action";
 
 export default function Home() {
+  useEffect(() => {
+    window.onPluginMessage = (m: Action) => {};
+  }, []);
+
   return (
     <main className="main-bg w-screen h-screen overflow-hidden px-3 py-5 text-[#180619] ">
       <div className="flex justify-center items-center h-[25%]">
