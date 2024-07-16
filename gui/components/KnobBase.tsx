@@ -74,6 +74,20 @@ export function KnobBase({
     onValueRawChange: setVal,
   });
 
+  useEffect(() => {
+    const handlePluginMessage = (event: any) => {
+      let message: Action = event.detail;
+      if (message.type === type) {
+        setRawValue(message.value);
+      }
+    };
+
+    window.addEventListener("pluginMessage", handlePluginMessage);
+    return () => {
+      window.removeEventListener("pluginMessage", handlePluginMessage);
+    };
+  }, []);
+
   // step functions are for keyboard control
 
   // in addition to changing the state,

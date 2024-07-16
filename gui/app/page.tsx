@@ -13,7 +13,10 @@ import { Action } from "@/bindings/Action";
 
 export default function Home() {
   useEffect(() => {
-    window.onPluginMessage = (m: Action) => {};
+    window.onPluginMessage = (message: Action) => {
+      let event = new CustomEvent("pluginMessage", { detail: message });
+      window.dispatchEvent(event);
+    };
   }, []);
 
   return (

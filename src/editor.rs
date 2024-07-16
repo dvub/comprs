@@ -80,15 +80,14 @@ pub fn create_editor(plugin: &mut CompressorPlugin) -> WebViewEditor {
             let mut param_update_buf_lock = param_update_buf.lock().unwrap();
             println!("BEFORE: {:?}", param_update_buf_lock);
             // TODO: refactor
-            /*
-                       if !tmp.is_empty() {
-                           for event in tmp {
-                               param_update_buf_lock.retain(|x| discriminant(x) != discriminant(&event));
-                           }
-                           println!("Cleared!");
-                       }
-                       println!("AFTER: {:?}", param_update_buf_lock);
-            */
+
+            if !tmp.is_empty() {
+                for event in tmp {
+                    param_update_buf_lock.retain(|x| discriminant(x) != discriminant(&event));
+                }
+                println!("Cleared!");
+            }
+            println!("AFTER: {:?}", param_update_buf_lock);
 
             for event in param_update_buf_lock.iter() {
                 ctx.send_json(json!(event))
