@@ -1,3 +1,4 @@
+"use client";
 /**
  * Modified knob BASE -
  * source:
@@ -72,6 +73,15 @@ export function KnobBase({
     stepLarger,
     onValueRawChange: setVal,
   });
+  useEffect(() => {
+    window.onPluginMessage = (m: Action) => {
+      console.log("AH");
+      if (m.type === type) {
+        console.log(m.type, m.value);
+        setRawValue(m.value);
+      }
+    };
+  }, []);
   // step functions are for keyboard control
 
   // in addition to changing the state,
@@ -84,12 +94,7 @@ export function KnobBase({
   function resetValue() {
     setVal(valueDefault);
   }
-  window.onPluginMessage = (m: Action) => {
-    if (m.type === type) {
-      console.log(m.type, m.value);
-      setRawValue(m.value);
-    }
-  };
+
   return (
     <div
       className={clsx(

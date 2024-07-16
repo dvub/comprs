@@ -34,6 +34,11 @@ pub enum ParameterType {
     DryWet { value: f32 },
 }
 
+// TODO:
+// implement something like
+// https://stackoverflow.com/questions/54177438/how-to-programmatically-get-the-number-of-fields-of-a-struct
+
+const NUM_PARAMETERS: usize = 8;
 // note: IF I could, I would just get rid of the enum above and then simply export this struct.
 // however, the CompressorParams struct uses FloatParam which doesn't derive the traits I need. :/
 
@@ -41,6 +46,8 @@ pub enum ParameterType {
 /// **NOTE**: In this documentation I've used the term "level" instead of "signal."
 /// This is because compressors may not always use the incoming signal as the value to use in calculations.
 /// An example would instead be using RMS, etc.
+///
+///
 #[derive(Params)]
 pub struct CompressorParams {
     pub changed_params: Arc<Mutex<Vec<ParameterType>>>,
@@ -112,7 +119,7 @@ fn generate_callback(
 
 impl Default for CompressorParams {
     fn default() -> Self {
-        let changed_params = Arc::new(Mutex::new(Vec::with_capacity(8)));
+        let changed_params = Arc::new(Mutex::new(Vec::with_capacity(NUM_PARAMETERS)));
         // I mostly just played around with other compressors and got a feel for their paramters
         // I spent way too much time tuning these
         Self {
@@ -170,7 +177,11 @@ impl Default for CompressorParams {
             )
             .with_smoother(SmoothingStyle::Linear(10.0))
             .with_unit(" ms")
-            .with_value_to_string(v2s_rounded_multiplied(3, 1000.0)),
+            .with_value_to_string(v2s_rounded_multiplied(3, 1000.0))
+            .with_callback(generate_callback(
+                |value| ParameterType::AttackTime { value },
+                &changed_params,
+            )),
 
             // RELEASE
             release_time: FloatParam::new(
@@ -184,7 +195,11 @@ impl Default for CompressorParams {
             )
             .with_smoother(SmoothingStyle::Linear(10.0))
             .with_unit(" ms")
-            .with_value_to_string(v2s_rounded_multiplied(3, 1000.0)),
+            .with_value_to_string(v2s_rounded_multiplied(3, 1000.0))
+            .with_callback(generate_callback(
+                |value| ParameterType::ReleaseTime { value },
+                &changed_params,
+            )),
             // KNEE WIDTH
             knee_width: FloatParam::new(
                 "Knee Width",
@@ -196,7 +211,11 @@ impl Default for CompressorParams {
             )
             .with_smoother(SmoothingStyle::Linear(10.0))
             .with_unit(" dB")
-            .with_value_to_string(v2s_f32_rounded(1)),
+            .with_value_to_string(v2s_f32_rounded(1))
+            .with_callback(generate_callback(
+                |value| ParameterType::KneeWidth { value },
+                &changed_params,
+            )),
             // INPUT GAIN
             // basically, the exact same as this. LOL
             // https://github.com/robbert-vdh/nih-plug/blob/ffe9b61fcb0441c9d33f4413f5ebe7394637b21f/plugins/examples/gain/src/lib.rs#L67
@@ -219,7 +238,11 @@ impl Default for CompressorParams {
             // decibels instead of as a linear gain value, we could have also used the
             // `.with_step_size(0.1)` function to get internal rounding.
             .with_value_to_string(formatters::v2s_f32_gain_to_db(2))
-            .with_string_to_value(formatters::s2v_f32_gain_to_db()),
+            .with_string_to_value(formatters::s2v_f32_gain_to_db())
+            .with_callback(generate_callback(
+                |value| ParameterType::InputGain { value },
+                &changed_params,
+            )),
             // OUTPUT GAIN
             output_gain: FloatParam::new(
                 "Output Gain",
@@ -233,12 +256,20 @@ impl Default for CompressorParams {
             .with_smoother(SmoothingStyle::Logarithmic(50.0))
             .with_unit(" dB")
             .with_value_to_string(formatters::v2s_f32_gain_to_db(2))
-            .with_string_to_value(formatters::s2v_f32_gain_to_db()),
+            .with_string_to_value(formatters::s2v_f32_gain_to_db())
+            .with_callback(generate_callback(
+                |value| ParameterType::OutputGain { value },
+                &changed_params,
+            )),
 
             dry_wet: FloatParam::new("Dry/Wet", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 }) // 1.0 default for full compressor effect
                 .with_smoother(SmoothingStyle::Linear(10.0))
                 .with_unit("%")
-                .with_value_to_string(v2s_rounded_multiplied(1, 100.0)),
+                .with_value_to_string(v2s_rounded_multiplied(1, 100.0))
+                .with_callback(generate_callback(
+                    |value| ParameterType::DryWet { value },
+                    &changed_params,
+                )),
             changed_params,
         }
     }
