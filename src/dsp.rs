@@ -42,10 +42,12 @@ impl RmsLevelDetector {
     }
 }
 /// Variants represent the different types of level detection that the compressor may use to update its internal gain.
+/*
 pub enum LevelDetectionType {
     /// Use RMS of the signal
     Rms,
 }
+*/
 /// Struct to represent a dynamic range compressor. See documentation for each field to learn more.
 pub struct Compressor {
     pub params: Arc<CompressorParams>,

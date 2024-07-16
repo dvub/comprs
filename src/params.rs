@@ -7,7 +7,7 @@ use nih_plug::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    mem::{discriminant, replace},
+    mem::discriminant,
     sync::{Arc, Mutex},
 };
 use ts_rs::TS;
