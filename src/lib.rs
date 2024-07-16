@@ -1,6 +1,6 @@
 mod dsp;
 pub mod editor;
-mod enums;
+
 mod params;
 
 use dsp::Compressor;

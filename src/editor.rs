@@ -5,11 +5,11 @@ use nih_plug_webview::{
 };
 use serde_json::json;
 
-use crate::{params::ParameterType, CompressorPlugin};
+use crate::{params::ParameterEvent, CompressorPlugin};
 
 pub fn create_editor(plugin: &mut CompressorPlugin) -> WebViewEditor {
     let params = plugin.compressor.params.clone();
-    let param_update_buf = plugin.compressor.params.changed_params.clone();
+    let event_buffer = plugin.compressor.params.event_buffer.clone();
 
     let size = (750, 500);
 
@@ -52,16 +52,16 @@ pub fn create_editor(plugin: &mut CompressorPlugin) -> WebViewEditor {
             _ => EventStatus::Ignored,
         })
         .with_event_loop(move |ctx, setter, _window| {
-            println!("- New Event Loop Iteration - ");
-            let mut tmp: Vec<ParameterType> = Vec::new();
+            let mut gui_event_buffer: Vec<ParameterEvent> = Vec::new();
             // in the event loop, we need to do 2 basic things, as far as parameters go
 
             // 1. receive parameter updates (and any other events) from GUI
             while let Ok(value) = ctx.next_event() {
                 if let Ok(action) = serde_json::from_value(value) {
                     let (param, value) = params.get_param(&action);
-                    tmp.retain(|event| discriminant(event) != discriminant(&action));
-                    tmp.push(action);
+
+                    gui_event_buffer.retain(|event| discriminant(event) != discriminant(&action));
+                    gui_event_buffer.push(action);
 
                     setter.begin_set_parameter(param);
                     setter.set_parameter(param, value);
@@ -74,27 +74,19 @@ pub fn create_editor(plugin: &mut CompressorPlugin) -> WebViewEditor {
             // 2. handle parameter updates from DAW (stuff like automation, etc)
             // these need to be sent to the GUI!!
 
-            // 2a.
             // remove GUI events from event buffer
             // we don't want to receive GUI events just to send them back to the GUI!!
-            let mut param_update_buf_lock = param_update_buf.lock().unwrap();
-            println!("BEFORE: {:?}", param_update_buf_lock);
-            // TODO: refactor
-
-            if !tmp.is_empty() {
-                for event in tmp {
-                    param_update_buf_lock.retain(|x| discriminant(x) != discriminant(&event));
-                }
-                println!("Cleared!");
+            let mut event_buffer_lock = event_buffer.lock().unwrap();
+            for event in gui_event_buffer {
+                event_buffer_lock.retain(|x| discriminant(x) != discriminant(&event));
             }
-            println!("AFTER: {:?}", param_update_buf_lock);
-
-            for event in param_update_buf_lock.iter() {
+            // send the remaining events to the GUI
+            for event in event_buffer_lock.iter() {
                 ctx.send_json(json!(event))
                     .expect("Error sending data to frontend");
             }
             // once we've sent our pending updates to the GUI, we can clear our event buffer;
-            param_update_buf_lock.clear();
+            event_buffer_lock.clear();
         });
     editor
 }

@@ -1,5 +1,5 @@
 import { Action } from "@/bindings/Action";
-import { PluginMessage } from "@/bindings/PluginMessage";
+
 // source:
 // https://stackoverflow.com/questions/12709074/how-do-you-explicitly-set-a-new-property-on-window-in-typescript
 
