@@ -7,7 +7,7 @@ use nih_plug::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    mem::discriminant,
+    mem::{discriminant, replace},
     sync::{Arc, Mutex},
 };
 use ts_rs::TS;
@@ -19,7 +19,7 @@ pub const DEFAULT_ATTACK_TIME: f32 = 0.001;
 pub const DEFAULT_RELEASE_TIME: f32 = 0.05;
 
 // "Run Test" (at least, in vscode) will (re-) generate the TS bindings
-#[derive(Deserialize, TS, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, TS, Debug, Clone, PartialEq)]
 #[ts(export_to = "../gui/bindings/Action.ts")]
 #[ts(export)]
 #[serde(tag = "type")]
@@ -92,33 +92,27 @@ impl CompressorParams {
     }
 }
 
+fn generate_callback(
+    t: fn(f32) -> ParameterType,
+    changed_params: &Arc<Mutex<Vec<ParameterType>>>,
+) -> Arc<impl Fn(f32)> {
+    let changed_params_clone = changed_params.clone();
+    let callback = Arc::new(move |value: f32| {
+        // create an enum variant from the value
+        let new_event = t(value);
+        let mut lock = changed_params_clone.lock().unwrap(); // TODO: don't unwrap lol
+
+        // now we need to find and remove old parameter events with the same enum variant
+        lock.retain(|event| discriminant(event) != discriminant(&new_event));
+        // now we are ready to add the new value
+        lock.push(new_event);
+    });
+    callback
+}
+
 impl Default for CompressorParams {
     fn default() -> Self {
-        let changed_params = Arc::new(Mutex::new(Vec::with_capacity(8))); // capacity is probably going to be problematic in the future lol
-        let changed_params_clone = changed_params.clone();
-        // need something like this
-        // fn a(p: &ParameterType) {}
-        let threshold_callback = Arc::new(move |value: f32| {
-            // create an enum variant from the value
-            let new_event = Threshold { value };
-            let mut lock = changed_params_clone.lock().unwrap(); // TODO: don't unwrap lol
-
-            // now we need to find and remove old parameter events with the same enum variant
-            lock.retain(|event| discriminant(event) != discriminant(&new_event));
-            // now we are ready to add the new value
-            lock.push(new_event);
-        });
-        let ratio_callback = Arc::new(move |value: f32| {
-            // create an enum variant from the value
-            let new_event = Ratio { value };
-            let mut lock = changed_params_clone.lock().unwrap(); // TODO: don't unwrap lol
-
-            // now we need to find and remove old parameter events with the same enum variant
-            lock.retain(|event| discriminant(event) != discriminant(&new_event));
-            // now we are ready to add the new value
-            lock.push(new_event);
-        });
-
+        let changed_params = Arc::new(Mutex::new(Vec::with_capacity(8)));
         // I mostly just played around with other compressors and got a feel for their paramters
         // I spent way too much time tuning these
         Self {
@@ -139,7 +133,10 @@ impl Default for CompressorParams {
             // TODO:
             // create a custom formatter for -inf dB
             .with_value_to_string(formatters::v2s_f32_rounded(2))
-            .with_callback(threshold_callback),
+            .with_callback(generate_callback(
+                |value| ParameterType::Threshold { value },
+                &changed_params,
+            )),
             // TODO:
             // do we need string_to_value..?
 
@@ -155,7 +152,11 @@ impl Default for CompressorParams {
             )
             .with_smoother(SmoothingStyle::Linear(10.0))
             // TODO: customize formatter
-            .with_value_to_string(formatters::v2s_compression_ratio(2)),
+            .with_value_to_string(formatters::v2s_compression_ratio(2))
+            .with_callback(generate_callback(
+                |value| ParameterType::Ratio { value },
+                &changed_params,
+            )),
 
             // ATTACK TIME
             attack_time: FloatParam::new(
@@ -170,6 +171,7 @@ impl Default for CompressorParams {
             .with_smoother(SmoothingStyle::Linear(10.0))
             .with_unit(" ms")
             .with_value_to_string(v2s_rounded_multiplied(3, 1000.0)),
+
             // RELEASE
             release_time: FloatParam::new(
                 "Release Time",
