@@ -20,7 +20,7 @@ pub fn create_editor(plugin: &mut CompressorPlugin) -> WebViewEditor {
 
     #[cfg(not(debug_assertions))]
     let mut editor = nih_plug_webview::editors::editor_with_frontend_dir(
-        "D:\\projects\\rust\\next-gain\\gui\\out".into(),
+        "D:\\projects\\rust\\comprs\\gui\\out".into(),
         size,
         None,
     );
