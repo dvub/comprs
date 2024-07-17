@@ -80,20 +80,7 @@ export function KnobBase(props: KnobBaseProps) {
       // to get some type safety back, we can add Action here
       const message: Action = event.detail;
       if (message.type === type) {
-        let current = valueRaw;
-        const next = message.value;
-        let t = 0.0;
-
-        const id = setInterval(() => {
-          if (t < 1.0) {
-            current = current * t + next * (1 - t);
-            setRawValue(current);
-            t += 0.01;
-          }
-        }, 10);
-        if (t >= 1.0) {
-          clearInterval(id);
-        }
+        setRawValue(message.value);
       }
     };
 
