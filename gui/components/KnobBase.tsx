@@ -45,7 +45,7 @@ export function KnobBase(props: KnobBaseProps) {
   // this value can be tweaked to adjust the feel of the knob
   const dragSensitivity = 0.003;
 
-  let {
+  const {
     label,
     valueDefault,
     valueMin,
@@ -78,9 +78,22 @@ export function KnobBase(props: KnobBaseProps) {
     // here's im using `any` because addEventListener will complain otherwise
     const handlePluginMessage = (event: any) => {
       // to get some type safety back, we can add Action here
-      let message: Action = event.detail;
+      const message: Action = event.detail;
       if (message.type === type) {
-        setRawValue(message.value);
+        let current = valueRaw;
+        const next = message.value;
+        let t = 0.0;
+
+        const id = setInterval(() => {
+          if (t < 1.0) {
+            current = current * t + next * (1 - t);
+            setRawValue(current);
+            t += 0.01;
+          }
+        }, 10);
+        if (t >= 1.0) {
+          clearInterval(id);
+        }
       }
     };
 
@@ -101,7 +114,7 @@ export function KnobBase(props: KnobBaseProps) {
     setVal(valueDefault);
   }
 
-  let thumbProps = {
+  const thumbProps = {
     value01: mapTo01(valueRaw, valueMin, valueMax),
     label: label,
     resetValue: resetValue,
@@ -124,7 +137,11 @@ export function KnobBase(props: KnobBaseProps) {
         mapTo01={mapTo01}
         mapFrom01={mapFrom01}
         onValueRawChange={setVal}
-        {...props}
+        valueRaw={valueRaw}
+        valueMin={valueMin}
+        valueMax={valueMax}
+        valueRawDisplayFn={valueRawDisplayFn}
+        valueRawRoundFn={() => 0.0}
         {...keyboardControlHandlers}
       >
         <KnobBaseThumb {...thumbProps} />
