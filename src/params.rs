@@ -36,6 +36,15 @@ pub enum ParameterEvent {
     DryWet { value: f32 },
 }
 
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export_to = "../gui/bindings/Messages.ts")]
+#[ts(export)]
+#[serde(tag = "type")]
+pub enum Messages {
+    Init,
+    ParameterUpdate { event: ParameterEvent },
+}
+
 // TODO:
 // implement something like
 // https://stackoverflow.com/questions/54177438/how-to-programmatically-get-the-number-of-fields-of-a-struct

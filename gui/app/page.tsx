@@ -9,11 +9,14 @@ import React, { useEffect } from "react";
 import { DryWetKnob } from "@/components/knobs/DryWetKnob";
 import { KneeKnob } from "@/components/knobs/KneeKnob";
 import { DBKnob } from "@/components/knobs/generic/DBKnob";
-import { Action } from "@/bindings/Action";
+import { ParameterEvent } from "@/bindings/Action";
+import { sendToPlugin } from "@/lib";
 
 export default function Home() {
   useEffect(() => {
-    window.onPluginMessage = (message: Action) => {
+    sendToPlugin({ type: "Init" });
+
+    window.onPluginMessage = (message: ParameterEvent) => {
       let event = new CustomEvent("pluginMessage", { detail: message });
       window.dispatchEvent(event);
     };

@@ -5,7 +5,10 @@ use nih_plug_webview::{
 };
 use serde_json::json;
 
-use crate::{params::ParameterEvent, CompressorPlugin};
+use crate::{
+    params::{Messages, ParameterEvent},
+    CompressorPlugin,
+};
 
 pub fn create_editor(plugin: &mut CompressorPlugin) -> WebViewEditor {
     let params = plugin.compressor.params.clone();
@@ -52,20 +55,34 @@ pub fn create_editor(plugin: &mut CompressorPlugin) -> WebViewEditor {
             _ => EventStatus::Ignored,
         })
         .with_event_loop(move |ctx, setter, _window| {
+            let mut event_buffer_lock = event_buffer.lock().unwrap();
             let mut gui_event_buffer: Vec<ParameterEvent> = Vec::new();
             // in the event loop, we need to do 2 basic things, as far as parameters go
 
             // 1. receive parameter updates (and any other events) from GUI
             while let Ok(value) = ctx.next_event() {
-                if let Ok(action) = serde_json::from_value(value) {
-                    let (param, value) = params.get_param(&action);
+                if let Ok(action) = serde_json::from_value::<Messages>(value) {
+                    match action {
+                        Messages::Init => {
+                            // TODO:
+                            // figure this shit out
+                            event_buffer_lock.push(ParameterEvent::Ratio {
+                                value: params.ratio.value(),
+                            });
 
-                    gui_event_buffer.retain(|event| discriminant(event) != discriminant(&action));
-                    gui_event_buffer.push(action);
+                            todo!()
+                        }
+                        Messages::ParameterUpdate { event } => {
+                            let (param, value) = params.get_param(&event);
 
-                    setter.begin_set_parameter(param);
-                    setter.set_parameter(param, value);
-                    setter.end_set_parameter(param);
+                            gui_event_buffer.retain(|d| discriminant(d) != discriminant(&event));
+                            gui_event_buffer.push(event);
+
+                            setter.begin_set_parameter(param);
+                            setter.set_parameter(param, value);
+                            setter.end_set_parameter(param);
+                        }
+                    }
                 } else {
                     println!("Error receiving message from GUI");
                 }
@@ -76,7 +93,7 @@ pub fn create_editor(plugin: &mut CompressorPlugin) -> WebViewEditor {
 
             // remove GUI events from event buffer
             // we don't want to receive GUI events just to send them back to the GUI!!
-            let mut event_buffer_lock = event_buffer.lock().unwrap();
+
             for event in gui_event_buffer {
                 event_buffer_lock.retain(|x| discriminant(x) != discriminant(&event));
             }

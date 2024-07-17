@@ -37,10 +37,10 @@ export function KnobBaseThumb({
       {/* Pointer line thingy - is it called a thumb ?? */}
       <div className="absolute h-full w-full" style={{ rotate: `${angle}deg` }}>
         <div className="absolute left-1/2 top-0 h-1/2 w-[2px] -translate-x-1/2 rounded-sm main-bg z-20" />
+        <p className="absolute top-[50%] text-center w-full -translate-y-1/2 font-black text-lg z-10 text-[#fcf3fc] opacity-25">
+          {label}
+        </p>
       </div>
-      <p className="absolute top-[50%] text-center w-full -translate-y-1/2 font-black text-lg z-10 text-[#fcf3fc] opacity-25">
-        {label}
-      </p>
     </div>
   );
 }

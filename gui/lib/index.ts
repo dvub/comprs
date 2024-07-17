@@ -1,4 +1,5 @@
-import { Action } from "@/bindings/Action";
+import { ParameterEvent } from "@/bindings/Action";
+import { Messages } from "@/bindings/Messages";
 
 // source:
 // https://stackoverflow.com/questions/12709074/how-do-you-explicitly-set-a-new-property-on-window-in-typescript
@@ -8,13 +9,13 @@ import { Action } from "@/bindings/Action";
 declare global {
   interface Window {
     ipc: { postMessage: (message: string) => void };
-    onPluginMessage: (message: Action) => void;
+    onPluginMessage: (message: ParameterEvent) => void;
   }
 }
 /*
 window.ipc = window.ipc || {};
 window.onPluginMessage = window.onPluginMessage || {};
 */
-export function sendToPlugin(msg: Action) {
+export function sendToPlugin(msg: ParameterEvent | Messages) {
   window.ipc.postMessage(JSON.stringify(msg));
 }

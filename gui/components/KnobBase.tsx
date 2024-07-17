@@ -16,7 +16,7 @@ import { mapFrom01Linear, mapTo01Linear } from "@dsp-ts/math";
 import { KnobBaseThumb } from "./KnobBaseThumb";
 import { sendToPlugin } from "../lib";
 import { NormalisableRange } from "@/lib/utils";
-import { Action } from "@/bindings/Action";
+import { ParameterEvent } from "@/bindings/Action";
 
 type KnobHeadlessProps = React.ComponentProps<typeof KnobHeadless>;
 
@@ -38,7 +38,7 @@ type KnobBaseProps = Pick<
   setRawValue: React.Dispatch<React.SetStateAction<number>>;
   size: number;
   range: NormalisableRange;
-  type: Action["type"];
+  type: ParameterEvent["type"];
 };
 
 export function KnobBase(props: KnobBaseProps) {
@@ -78,7 +78,7 @@ export function KnobBase(props: KnobBaseProps) {
     // here's im using `any` because addEventListener will complain otherwise
     const handlePluginMessage = (event: any) => {
       // to get some type safety back, we can add Action here
-      const message: Action = event.detail;
+      const message: ParameterEvent = event.detail;
       if (message.type === type) {
         setRawValue(message.value);
       }
@@ -133,6 +133,7 @@ export function KnobBase(props: KnobBaseProps) {
       >
         <KnobBaseThumb {...thumbProps} />
       </KnobHeadless>
+
       <KnobHeadlessOutput htmlFor={knobId}>
         {valueRawDisplayFn(valueRaw)}
       </KnobHeadlessOutput>
