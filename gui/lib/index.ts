@@ -1,4 +1,4 @@
-import { ParameterEvent } from "@/bindings/Action";
+import { ParameterEvent } from "@/bindings/ParameterEvent";
 import { Messages } from "@/bindings/Messages";
 
 // source:

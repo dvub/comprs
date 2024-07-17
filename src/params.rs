@@ -20,7 +20,7 @@ pub const DEFAULT_RELEASE_TIME: f32 = 0.05;
 
 // "Run Test" (at least, in vscode) will (re-) generate the TS bindings
 #[derive(Deserialize, Serialize, TS, Debug, Clone, PartialEq)]
-#[ts(export_to = "../gui/bindings/Action.ts")]
+#[ts(export_to = "../gui/bindings/ParameterEvent.ts")]
 #[ts(export)]
 #[serde(tag = "type")]
 // TODO:

@@ -16,7 +16,7 @@ import { mapFrom01Linear, mapTo01Linear } from "@dsp-ts/math";
 import { KnobBaseThumb } from "./KnobBaseThumb";
 import { sendToPlugin } from "../lib";
 import { NormalisableRange } from "@/lib/utils";
-import { ParameterEvent } from "@/bindings/Action";
+import { ParameterEvent } from "@/bindings/ParameterEvent";
 
 type KnobHeadlessProps = React.ComponentProps<typeof KnobHeadless>;
 
@@ -94,7 +94,10 @@ export function KnobBase(props: KnobBaseProps) {
   // we want to also send a message to the plugin backend here
   function setVal(valueRaw: number) {
     setRawValue(valueRaw);
-    sendToPlugin({ type: type, value: valueRaw });
+    sendToPlugin({
+      type: "ParameterUpdate",
+      event: { type: type, value: valueRaw },
+    });
   }
 
   function resetValue() {

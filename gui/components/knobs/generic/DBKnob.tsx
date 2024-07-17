@@ -8,7 +8,7 @@
 import { NormalisableRange, dbToGain, gainToDb } from "@/lib/utils";
 import { KnobBase } from "../../KnobBase";
 import { useState } from "react";
-import { ParameterEvent } from "@/bindings/Action";
+import { ParameterEvent } from "@/bindings/ParameterEvent";
 
 export function DBKnob(props: {
   label: string;

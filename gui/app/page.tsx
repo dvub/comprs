@@ -5,17 +5,16 @@ import { TimeKnob } from "@/components/knobs/generic/TimeKnob";
 import { RatioKnob } from "@/components/knobs/RatioKnob";
 import { ThresholdKnob } from "@/components/knobs/ThresholdKnob";
 import { NormalisableRange } from "@/lib/utils";
-import React, { useEffect } from "react";
+import React, { useEffect, useLayoutEffect } from "react";
 import { DryWetKnob } from "@/components/knobs/DryWetKnob";
 import { KneeKnob } from "@/components/knobs/KneeKnob";
 import { DBKnob } from "@/components/knobs/generic/DBKnob";
-import { ParameterEvent } from "@/bindings/Action";
+import { ParameterEvent } from "@/bindings/ParameterEvent";
 import { sendToPlugin } from "@/lib";
 
 export default function Home() {
   useEffect(() => {
     sendToPlugin({ type: "Init" });
-
     window.onPluginMessage = (message: ParameterEvent) => {
       let event = new CustomEvent("pluginMessage", { detail: message });
       window.dispatchEvent(event);

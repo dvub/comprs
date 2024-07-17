@@ -1,5 +1,6 @@
 use std::mem::discriminant;
 
+use nih_plug::nih_log;
 use nih_plug_webview::{
     DropData, DropEffect, EventStatus, HTMLSource, Key, MouseEvent, WebViewEditor,
 };
@@ -64,13 +65,39 @@ pub fn create_editor(plugin: &mut CompressorPlugin) -> WebViewEditor {
                 if let Ok(action) = serde_json::from_value::<Messages>(value) {
                     match action {
                         Messages::Init => {
+                            nih_log!("GUI Opened, sending initial data..");
                             // TODO:
                             // figure this shit out
                             event_buffer_lock.push(ParameterEvent::Ratio {
                                 value: params.ratio.value(),
                             });
 
-                            todo!()
+                            event_buffer_lock.push(ParameterEvent::Threshold {
+                                value: params.threshold.value(),
+                            });
+
+                            event_buffer_lock.push(ParameterEvent::KneeWidth {
+                                value: params.knee_width.value(),
+                            });
+
+                            event_buffer_lock.push(ParameterEvent::AttackTime {
+                                value: params.attack_time.value(),
+                            });
+
+                            event_buffer_lock.push(ParameterEvent::ReleaseTime {
+                                value: params.release_time.value(),
+                            });
+
+                            event_buffer_lock.push(ParameterEvent::InputGain {
+                                value: params.input_gain.value(),
+                            });
+
+                            event_buffer_lock.push(ParameterEvent::OutputGain {
+                                value: params.output_gain.value(),
+                            });
+                            event_buffer_lock.push(ParameterEvent::DryWet {
+                                value: params.dry_wet.value(),
+                            });
                         }
                         Messages::ParameterUpdate { event } => {
                             let (param, value) = params.get_param(&event);
