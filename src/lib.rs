@@ -3,9 +3,10 @@ pub mod editor;
 
 mod params;
 
+use circular_buffer::CircularBuffer;
 use dsp::Compressor;
 use editor::create_editor;
-use nih_plug::prelude::*;
+use nih_plug::{buffer, prelude::*};
 use params::CompressorParams;
 
 use std::sync::Arc;
@@ -73,7 +74,7 @@ impl Plugin for CompressorPlugin {
         let sample_rate = context.transport().sample_rate;
         if self.compressor.rms.sample_rate != sample_rate {
             self.compressor.rms.sample_rate = sample_rate;
-            self.compressor.rms.buffer_size = (sample_rate * 1e-3) as usize;
+            let buffer_size = (sample_rate * 1e-3) as usize;
             // TODO:
             // extend buffer size when sample rate changes
         }
