@@ -4,6 +4,7 @@ use circular_buffer::CircularBuffer;
 // TODO:
 // consider using fast functions
 use nih_plug::{
+    nih_log,
     params::Param,
     util::{db_to_gain, gain_to_db},
 };
@@ -41,7 +42,9 @@ impl RmsLevelDetector {
         self.buffer.push_front(input);
         self.squared_sum += input.powi(2);
         self.squared_sum -= old_sample.powi(2);
-        (self.squared_sum / BUFFER_SIZE as f32).sqrt()
+        let rms = (self.squared_sum / BUFFER_SIZE as f32).sqrt();
+        // println!("{}", rms);
+        rms
     }
 }
 /// Variants represent the different types of level detection that the compressor may use to update its internal gain.
@@ -72,7 +75,6 @@ impl Compressor {
         let dry_wet = self.params.dry_wet.smoothed.next();
         let input_gain = self.params.input_gain.smoothed.next();
         let output_gain = self.params.output_gain.smoothed.next();
-
         // modify with input gain
         *sample *= input_gain;
         // save a dry copy
@@ -97,12 +99,12 @@ impl Compressor {
         let new_gain = self.rms.calculate_rms(sample);
         // based on if our incoming signal is increasing or decreasing, choose the filter coefficent to use.
         let theta = if new_gain > avg_gain {
-            Self::calculate_filter_coefficient(self.params.attack_time.smoothed.next())
+            Self::calculate_filter_coefficient(self.params.attack_time.value())
         } else {
-            Self::calculate_filter_coefficient(self.params.release_time.smoothed.next())
+            Self::calculate_filter_coefficient(self.params.release_time.value())
         };
         // filter to smooth the average gain. this is also a good place to apply our attack and release.
-        self.average_gain = (1.0 - theta) * new_gain + theta * avg_gain;
+        self.average_gain = (1.0 - theta) * new_gain + theta * avg_gain
     }
 
     /// This function converts the internal average gain of the compressor to decibels, then uses a soft-knee equation to calculate the gain reduction.
@@ -148,5 +150,6 @@ impl Compressor {
 
     fn calculate_filter_coefficient(input: f32) -> f32 {
         (-1.0 / (SAMPLE_RATE * input)).exp()
+        //1.0 - (-2200.0 / (SAMPLE_RATE * input)).exp()
     }
 }

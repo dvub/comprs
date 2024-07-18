@@ -10,6 +10,7 @@
             "args": [
                 "D:/Music things/LIVESETS/test project Project/test project.als"
             ], // open our project
+            "cwd": "", // TODO: should this be ${workspaceFolder}?
             "environment": [],
             "symbolOptions": {
                 "searchPaths": [
