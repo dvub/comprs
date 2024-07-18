@@ -65,10 +65,25 @@ pub struct Compressor {
 
 impl Compressor {
     /// Processes a single input sample and returns the processed sample.
-    pub fn process(&mut self, sample: f32) -> (f32, f32) {
-        self.update_gain(sample);
+    pub fn process(&mut self, sample: &mut f32) {
+        let dry_wet = self.params.dry_wet.smoothed.next();
+        let input_gain = self.params.input_gain.smoothed.next();
+        let output_gain = self.params.output_gain.smoothed.next();
+        // modify with input gain
+        *sample *= input_gain;
+        // save a dry copy
+        let pre_processed = *sample;
+        // save a wet copy
+        self.update_gain(*sample);
         let c = self.calculate_gain_reduction();
-        (sample * c, 0.0)
+        let processed = *sample * c;
+        // blend based on dry_wet
+        let mut blended_output = (1.0 - dry_wet) * pre_processed + dry_wet * processed;
+
+        // finally, modify with output gain
+        blended_output *= output_gain;
+        // and we're done!
+        *sample = blended_output
     }
 
     /// Updates the internal gain of the compressor given an input sample.

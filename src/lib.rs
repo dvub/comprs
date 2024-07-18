@@ -72,22 +72,7 @@ impl Plugin for CompressorPlugin {
     ) -> ProcessStatus {
         for mut channel_samples in buffer.iter_samples() {
             for sample in channel_samples.iter_mut() {
-                let dry_wet = self.compressor.params.dry_wet.smoothed.next();
-                let input_gain = self.compressor.params.input_gain.smoothed.next();
-                let output_gain = self.compressor.params.output_gain.smoothed.next();
-                // modify with input gain
-                *sample *= input_gain;
-                // save a dry copy
-                let pre_processed = *sample;
-                // save a wet copy
-                let processed = self.compressor.process(*sample).0;
-                // blend based on dry_wet
-                let mut blended_output = (1.0 - dry_wet) * pre_processed + dry_wet * processed;
-
-                // finally, modify with output gain
-                blended_output *= output_gain;
-                // and we're done!
-                *sample = blended_output;
+                self.compressor.process(sample);
             }
         }
 

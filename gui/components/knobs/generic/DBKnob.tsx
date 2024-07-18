@@ -8,14 +8,15 @@
 import { NormalisableRange, dbToGain, gainToDb } from "@/lib/utils";
 import { KnobBase } from "../../KnobBase";
 import { useState } from "react";
-import { ParameterEvent } from "@/bindings/ParameterEvent";
+import { Parameter } from "@/bindings/Parameter";
+import { ParameterType } from "@/lib";
 
 export function DBKnob(props: {
   label: string;
   minValue: number;
   maxValue: number;
   defaultValue: number;
-  parameter: ParameterEvent["parameter"];
+  parameter: ParameterType;
 }) {
   const { label, minValue, maxValue, defaultValue } = props;
 

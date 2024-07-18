@@ -9,16 +9,19 @@ import React, { useEffect, useLayoutEffect } from "react";
 import { DryWetKnob } from "@/components/knobs/DryWetKnob";
 import { KneeKnob } from "@/components/knobs/KneeKnob";
 import { DBKnob } from "@/components/knobs/generic/DBKnob";
-import { ParameterEvent } from "@/bindings/ParameterEvent";
+import { Parameter } from "@/bindings/Parameter";
 import { sendToPlugin } from "@/lib";
 
 export default function Home() {
   useEffect(() => {
-    sendToPlugin("Init");
-    window.onPluginMessage = (message: ParameterEvent) => {
+    window.onPluginMessage = (message: Parameter) => {
       let event = new CustomEvent("pluginMessage", { detail: message });
       window.dispatchEvent(event);
     };
+
+    // TODO:
+    // prevent knobs from setting themselves after a delay... really annoying and jarring
+    sendToPlugin("Init");
   }, []);
 
   return (

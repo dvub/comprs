@@ -7,7 +7,10 @@ use nih_plug_webview::{
 use serde_json::json;
 
 use crate::{
-    params::{Messages, ParameterEvent},
+    params::{
+        Messages,
+        Parameter::{self, *},
+    },
     CompressorPlugin,
 };
 
@@ -57,7 +60,7 @@ pub fn create_editor(plugin: &mut CompressorPlugin) -> WebViewEditor {
         })
         .with_event_loop(move |ctx, setter, _window| {
             let mut event_buffer_lock = event_buffer.lock().unwrap();
-            let mut gui_event_buffer: Vec<ParameterEvent> = Vec::new();
+            let mut gui_event_buffer: Vec<Parameter> = Vec::new();
             // in the event loop, we need to do 2 basic things, as far as parameters go
 
             // 1. receive parameter updates (and any other events) from GUI
@@ -67,41 +70,27 @@ pub fn create_editor(plugin: &mut CompressorPlugin) -> WebViewEditor {
                         Messages::Init => {
                             nih_log!("GUI Opened, sending initial data..");
                             // TODO:
-                            // figure this shit out
-                            event_buffer_lock.push(ParameterEvent::Ratio {
-                                value: params.ratio.value(),
-                            });
+                            // is there a nicer way ot do this?
+                            let vec = vec![
+                                Threshold(params.threshold.value()),
+                                Ratio(params.ratio.value()),
+                                KneeWidth(params.knee_width.value()),
+                                AttackTime(params.attack_time.value()),
+                                ReleaseTime(params.release_time.value()),
+                                InputGain(params.input_gain.value()),
+                                OutputGain(params.output_gain.value()),
+                                DryWet(params.dry_wet.value()),
+                            ];
 
-                            event_buffer_lock.push(ParameterEvent::Threshold {
-                                value: params.threshold.value(),
-                            });
-
-                            event_buffer_lock.push(ParameterEvent::KneeWidth {
-                                value: params.knee_width.value(),
-                            });
-
-                            event_buffer_lock.push(ParameterEvent::AttackTime {
-                                value: params.attack_time.value(),
-                            });
-
-                            event_buffer_lock.push(ParameterEvent::ReleaseTime {
-                                value: params.release_time.value(),
-                            });
-
-                            event_buffer_lock.push(ParameterEvent::InputGain {
-                                value: params.input_gain.value(),
-                            });
-
-                            event_buffer_lock.push(ParameterEvent::OutputGain {
-                                value: params.output_gain.value(),
-                            });
-                            event_buffer_lock.push(ParameterEvent::DryWet {
-                                value: params.dry_wet.value(),
-                            });
+                            for v in vec {
+                                event_buffer_lock.push(v);
+                            }
                         }
                         Messages::ParameterUpdate(event) => {
                             let (param, value) = params.get_param(&event);
 
+                            // todo(?)
+                            // is retain() necessary
                             gui_event_buffer.retain(|d| discriminant(d) != discriminant(&event));
                             gui_event_buffer.push(event);
 

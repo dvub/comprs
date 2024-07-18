@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { KnobBase } from "../../KnobBase";
 import { NormalisableRange } from "@/lib/utils";
-import { ParameterEvent } from "@/bindings/ParameterEvent";
+import { Parameter } from "@/bindings/Parameter";
+import { ParameterType } from "@/lib";
 
 export function TimeKnob(props: {
   label: string;
@@ -9,7 +10,7 @@ export function TimeKnob(props: {
   minValue: number;
   defaultValue: number;
   range: NormalisableRange;
-  parameter: ParameterEvent["parameter"];
+  parameter: ParameterType;
 }) {
   const { label, maxValue, minValue, defaultValue, range } = props;
   const [value, setValue] = useState(defaultValue);

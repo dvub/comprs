@@ -14,9 +14,9 @@ import {
 } from "react-knob-headless";
 import { mapFrom01Linear, mapTo01Linear } from "@dsp-ts/math";
 import { KnobBaseThumb } from "./KnobBaseThumb";
-import { sendToPlugin } from "../lib";
+import { ParameterType, sendToPlugin } from "../lib";
 import { NormalisableRange } from "@/lib/utils";
-import { ParameterEvent } from "@/bindings/ParameterEvent";
+import { Parameter } from "@/bindings/Parameter";
 
 type KnobHeadlessProps = React.ComponentProps<typeof KnobHeadless>;
 
@@ -38,7 +38,7 @@ type KnobBaseProps = Pick<
   setRawValue: React.Dispatch<React.SetStateAction<number>>;
   size: number;
   range: NormalisableRange;
-  parameter: ParameterEvent["parameter"];
+  parameter: ParameterType;
 };
 
 export function KnobBase(props: KnobBaseProps) {
@@ -55,7 +55,7 @@ export function KnobBase(props: KnobBaseProps) {
     stepLargerFn,
     setRawValue,
     size,
-    parameter: type,
+    parameter,
     mapTo01 = mapTo01Linear,
     mapFrom01 = mapFrom01Linear,
     valueRaw,
@@ -77,10 +77,13 @@ export function KnobBase(props: KnobBaseProps) {
     // NOTE:
     // here's im using `any` because addEventListener will complain otherwise
     const handlePluginMessage = (event: any) => {
-      // to get some type safety back, we can add Action here
-      const message: ParameterEvent = event.detail;
-      if (message.parameter === type) {
-        setRawValue(message.value);
+      const message: Parameter = event.detail;
+
+      if (parameter in message) {
+        // TODO:
+        // fix this? feels kind of scuffed
+        let value = Object.values(message);
+        setRawValue(value[0]);
       }
     };
 
@@ -95,7 +98,9 @@ export function KnobBase(props: KnobBaseProps) {
   function setVal(valueRaw: number) {
     setRawValue(valueRaw);
     sendToPlugin({
-      ParameterUpdate: { parameter: type, value: valueRaw },
+      // TODO: change this assertion
+      // asserting like this feels very ugly but it works i guess
+      ParameterUpdate: { [parameter]: valueRaw } as Parameter,
     });
   }
 

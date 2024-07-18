@@ -1,4 +1,4 @@
-use crate::params::ParameterEvent::*;
+use crate::params::Parameter::*;
 use nih_plug::{
     formatters::{self, v2s_f32_rounded},
     params::{FloatParam, Params},
@@ -20,20 +20,19 @@ pub const DEFAULT_RELEASE_TIME: f32 = 0.05;
 
 // "Run Test" (at least, in vscode) will (re-) generate the TS bindings
 #[derive(Deserialize, Serialize, TS, Debug, Clone, PartialEq)]
-#[ts(export_to = "../gui/bindings/ParameterEvent.ts")]
+#[ts(export_to = "../gui/bindings/Parameter.ts")]
 #[ts(export)]
-#[serde(tag = "parameter")]
 // TODO:
 // document this
-pub enum ParameterEvent {
-    Ratio { value: f32 },
-    Threshold { value: f32 },
-    AttackTime { value: f32 },
-    ReleaseTime { value: f32 },
-    KneeWidth { value: f32 },
-    InputGain { value: f32 },
-    OutputGain { value: f32 },
-    DryWet { value: f32 },
+pub enum Parameter {
+    Ratio(f32),
+    Threshold(f32),
+    AttackTime(f32),
+    ReleaseTime(f32),
+    KneeWidth(f32),
+    InputGain(f32),
+    OutputGain(f32),
+    DryWet(f32),
 }
 
 #[derive(Deserialize, Serialize, TS)]
@@ -41,7 +40,7 @@ pub enum ParameterEvent {
 #[ts(export)]
 pub enum Messages {
     Init,
-    ParameterUpdate(ParameterEvent),
+    ParameterUpdate(Parameter),
 }
 
 // TODO:
@@ -57,7 +56,7 @@ const NUM_PARAMETERS: usize = 8;
 ///
 #[derive(Params)]
 pub struct CompressorParams {
-    pub event_buffer: Arc<Mutex<Vec<ParameterEvent>>>,
+    pub event_buffer: Arc<Mutex<Vec<Parameter>>>,
 
     /// The threshold at which to begin applying compression **in decibels.**
     /// For example, a compressor with a threshold of -10db would (for the most part) compress when *the level* above -10db.
@@ -93,16 +92,16 @@ pub struct CompressorParams {
 
 impl CompressorParams {
     /// Returns a tuple of the corresponding FloatParam and value based on a `ParameterEvent` input
-    pub fn get_param(&self, action: &ParameterEvent) -> (&FloatParam, f32) {
+    pub fn get_param(&self, action: &Parameter) -> (&FloatParam, f32) {
         match action {
-            Ratio { value } => (&self.ratio, *value),
-            Threshold { value } => (&self.threshold, *value),
-            AttackTime { value } => (&self.attack_time, *value),
-            ReleaseTime { value } => (&self.release_time, *value),
-            KneeWidth { value } => (&self.knee_width, *value),
-            InputGain { value } => (&self.input_gain, *value),
-            OutputGain { value } => (&self.output_gain, *value),
-            DryWet { value } => (&self.dry_wet, *value),
+            Ratio(value) => (&self.ratio, *value),
+            Threshold(value) => (&self.threshold, *value),
+            AttackTime(value) => (&self.attack_time, *value),
+            ReleaseTime(value) => (&self.release_time, *value),
+            KneeWidth(value) => (&self.knee_width, *value),
+            InputGain(value) => (&self.input_gain, *value),
+            OutputGain(value) => (&self.output_gain, *value),
+            DryWet(value) => (&self.dry_wet, *value),
         }
     }
 }
@@ -110,8 +109,8 @@ impl CompressorParams {
 /// Creates a callback which pushes the given `ParameterEvent` to the `event_buffer`.
 /// The callback should be attached to a `FloatParam`
 fn generate_callback(
-    variant: fn(f32) -> ParameterEvent,
-    event_buffer: &Arc<Mutex<Vec<ParameterEvent>>>,
+    variant: fn(f32) -> Parameter,
+    event_buffer: &Arc<Mutex<Vec<Parameter>>>,
 ) -> Arc<impl Fn(f32)> {
     let event_buffer_clone = event_buffer.clone();
 
@@ -154,10 +153,7 @@ impl Default for CompressorParams {
             // TODO:
             // create a custom formatter for -inf dB
             .with_value_to_string(formatters::v2s_f32_rounded(2))
-            .with_callback(generate_callback(
-                |value| ParameterEvent::Threshold { value },
-                &event_buffer,
-            )),
+            .with_callback(generate_callback(Threshold, &event_buffer)),
             // TODO:
             // do we need string_to_value..?
 
@@ -174,10 +170,7 @@ impl Default for CompressorParams {
             .with_smoother(SmoothingStyle::Linear(10.0))
             // TODO: customize formatter
             .with_value_to_string(formatters::v2s_compression_ratio(2))
-            .with_callback(generate_callback(
-                |value| ParameterEvent::Ratio { value },
-                &event_buffer,
-            )),
+            .with_callback(generate_callback(Ratio, &event_buffer)),
 
             // ATTACK TIME
             attack_time: FloatParam::new(
@@ -192,10 +185,7 @@ impl Default for CompressorParams {
             .with_smoother(SmoothingStyle::Linear(10.0))
             .with_unit(" ms")
             .with_value_to_string(v2s_rounded_multiplied(3, 1000.0))
-            .with_callback(generate_callback(
-                |value| ParameterEvent::AttackTime { value },
-                &event_buffer,
-            )),
+            .with_callback(generate_callback(AttackTime, &event_buffer)),
 
             // RELEASE
             release_time: FloatParam::new(
@@ -210,10 +200,7 @@ impl Default for CompressorParams {
             .with_smoother(SmoothingStyle::Linear(10.0))
             .with_unit(" ms")
             .with_value_to_string(v2s_rounded_multiplied(3, 1000.0))
-            .with_callback(generate_callback(
-                |value| ParameterEvent::ReleaseTime { value },
-                &event_buffer,
-            )),
+            .with_callback(generate_callback(ReleaseTime, &event_buffer)),
             // KNEE WIDTH
             knee_width: FloatParam::new(
                 "Knee Width",
@@ -226,10 +213,7 @@ impl Default for CompressorParams {
             .with_smoother(SmoothingStyle::Linear(10.0))
             .with_unit(" dB")
             .with_value_to_string(v2s_f32_rounded(1))
-            .with_callback(generate_callback(
-                |value| ParameterEvent::KneeWidth { value },
-                &event_buffer,
-            )),
+            .with_callback(generate_callback(KneeWidth, &event_buffer)),
             // INPUT GAIN
             // basically, the exact same as this. LOL
             // https://github.com/robbert-vdh/nih-plug/blob/ffe9b61fcb0441c9d33f4413f5ebe7394637b21f/plugins/examples/gain/src/lib.rs#L67
@@ -253,10 +237,7 @@ impl Default for CompressorParams {
             // `.with_step_size(0.1)` function to get internal rounding.
             .with_value_to_string(formatters::v2s_f32_gain_to_db(2))
             .with_string_to_value(formatters::s2v_f32_gain_to_db())
-            .with_callback(generate_callback(
-                |value| ParameterEvent::InputGain { value },
-                &event_buffer,
-            )),
+            .with_callback(generate_callback(InputGain, &event_buffer)),
             // OUTPUT GAIN
             output_gain: FloatParam::new(
                 "Output Gain",
@@ -271,19 +252,13 @@ impl Default for CompressorParams {
             .with_unit(" dB")
             .with_value_to_string(formatters::v2s_f32_gain_to_db(2))
             .with_string_to_value(formatters::s2v_f32_gain_to_db())
-            .with_callback(generate_callback(
-                |value| ParameterEvent::OutputGain { value },
-                &event_buffer,
-            )),
+            .with_callback(generate_callback(OutputGain, &event_buffer)),
 
             dry_wet: FloatParam::new("Dry/Wet", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 }) // 1.0 default for full compressor effect
                 .with_smoother(SmoothingStyle::Linear(10.0))
                 .with_unit("%")
                 .with_value_to_string(v2s_rounded_multiplied(1, 100.0))
-                .with_callback(generate_callback(
-                    |value| ParameterEvent::DryWet { value },
-                    &event_buffer,
-                )),
+                .with_callback(generate_callback(DryWet, &event_buffer)),
             event_buffer,
         }
     }
