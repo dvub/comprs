@@ -3,11 +3,7 @@ use std::sync::Arc;
 use circular_buffer::CircularBuffer;
 // TODO:
 // consider using fast functions
-use nih_plug::{
-    nih_log,
-    params::Param,
-    util::{db_to_gain, gain_to_db},
-};
+use nih_plug::util::{db_to_gain, gain_to_db};
 
 use crate::params::CompressorParams;
 // TODO:
@@ -42,9 +38,12 @@ impl RmsLevelDetector {
         self.buffer.push_front(input);
         self.squared_sum += input.powi(2);
         self.squared_sum -= old_sample.powi(2);
-        let rms = (self.squared_sum / BUFFER_SIZE as f32).sqrt();
-        // println!("{}", rms);
-        rms
+
+        // WORKAROUND...
+        if self.squared_sum.is_sign_negative() {
+            self.squared_sum = 0.0;
+        }
+        (self.squared_sum / BUFFER_SIZE as f32).sqrt()
     }
 }
 /// Variants represent the different types of level detection that the compressor may use to update its internal gain.
@@ -99,12 +98,13 @@ impl Compressor {
         let new_gain = self.rms.calculate_rms(sample);
         // based on if our incoming signal is increasing or decreasing, choose the filter coefficent to use.
         let theta = if new_gain > avg_gain {
-            Self::calculate_filter_coefficient(self.params.attack_time.value())
+            self.params.attack_time.smoothed.next()
         } else {
-            Self::calculate_filter_coefficient(self.params.release_time.value())
+            self.params.release_time.smoothed.next()
         };
-        // filter to smooth the average gain. this is also a good place to apply our attack and release.
-        self.average_gain = (1.0 - theta) * new_gain + theta * avg_gain
+
+        let n = (1.0 - theta) * new_gain + theta * avg_gain;
+        self.average_gain = n;
     }
 
     /// This function converts the internal average gain of the compressor to decibels, then uses a soft-knee equation to calculate the gain reduction.
@@ -141,15 +141,20 @@ impl Compressor {
     // TODO: rewrite documentation lol
     pub fn new(params: Arc<CompressorParams>) -> Self {
         let default_gain = 0.0;
+
         Compressor {
             params,
             average_gain: default_gain,
             rms: RmsLevelDetector::default(),
         }
     }
-
-    fn calculate_filter_coefficient(input: f32) -> f32 {
-        (-1.0 / (SAMPLE_RATE * input)).exp()
-        //1.0 - (-2200.0 / (SAMPLE_RATE * input)).exp()
-    }
+}
+// TODO:
+// tests for sanity check
+pub fn calculate_filter_coefficient(input: f32) -> f32 {
+    (-1.0 / (SAMPLE_RATE * input)).exp()
+    //1.0 - (-2200.0 / (SAMPLE_RATE * input)).exp()
+}
+pub fn inverse_calculate_filter_coefficient(output_coeff: f32) -> f32 {
+    1.0 / (SAMPLE_RATE * (-output_coeff.ln()))
 }

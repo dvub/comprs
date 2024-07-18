@@ -1,4 +1,7 @@
-use crate::params::Parameter::*;
+use crate::{
+    dsp::{calculate_filter_coefficient, inverse_calculate_filter_coefficient},
+    params::Parameter::*,
+};
 use nih_plug::{
     formatters::{self, v2s_f32_rounded},
     params::{FloatParam, Params},
@@ -60,6 +63,9 @@ pub struct CompressorParams {
 
     /// The threshold at which to begin applying compression **in decibels.**
     /// For example, a compressor with a threshold of -10db would (for the most part) compress when *the level* above -10db.
+    ///
+    /// Because the threshold is used in dB-based calculations in the DSP, the underlying value is dB and not voltage.
+    /// Therefore, there are no display conversions, etc.
     #[id = "threshold"]
     pub threshold: FloatParam,
     /// The compression ratio as the left side of the ratio **in decibels**.
@@ -67,10 +73,14 @@ pub struct CompressorParams {
     /// which means that for every 2db that *the level* is above the `threshold`, 1db will pass through.
     #[id = "ratio"]
     pub ratio: FloatParam,
-    /// The time it takes, **in seconds**, before the compressor starts compressing after *the level* is above the threshold.
+    /// The time it takes before the compressor starts compressing after *the level* is above the threshold.
+    ///
+    /// **NOTE**: The actual underlying value is the filter coefficient for the compressor, however the value is converted and displayed in (milli)seconds.
     #[id = "attack"]
     pub attack_time: FloatParam,
-    /// The time it takes, **in seconds**, for the compressor to stop compressing after *the level* falls below the threshold.
+    /// The time it takes for the compressor to stop compressing after *the level* falls below the threshold.
+    ///
+    /// **NOTE**: The actual underlying value is the release filter coefficient for the compressor, however the value is converted and displayed in (milli)seconds.
     #[id = "release"]
     pub release_time: FloatParam,
     /// The knee width **in decibels**. This smooths the transition between compression and no compression around the threshold.
@@ -170,36 +180,35 @@ impl Default for CompressorParams {
             .with_smoother(SmoothingStyle::Linear(10.0))
             // TODO: customize formatter
             .with_value_to_string(formatters::v2s_compression_ratio(2))
+            .with_unit(" dB")
             .with_callback(generate_callback(Ratio, &event_buffer)),
 
             // ATTACK TIME
             attack_time: FloatParam::new(
                 "Attack Time",
-                DEFAULT_ATTACK_TIME,
+                calculate_filter_coefficient(DEFAULT_ATTACK_TIME),
                 FloatRange::Skewed {
-                    min: 0.0, // 0 seconds atk time, meaning the compressor takes effect instantly
-                    max: 1.0,
-                    factor: FloatRange::skew_factor(-2.15),
+                    min: calculate_filter_coefficient(0.0), // 0 seconds atk time, meaning the compressor takes effect instantly
+                    max: calculate_filter_coefficient(1.0),
+                    factor: FloatRange::skew_factor(5.0), // just happened to be right in the middle
                 },
             )
             .with_smoother(SmoothingStyle::Linear(10.0))
-            .with_unit(" ms")
-            .with_value_to_string(v2s_rounded_multiplied(3, 1000.0))
+            .with_value_to_string(v2s_time_formatter())
             .with_callback(generate_callback(AttackTime, &event_buffer)),
 
             // RELEASE
             release_time: FloatParam::new(
                 "Release Time",
-                DEFAULT_RELEASE_TIME,
+                calculate_filter_coefficient(DEFAULT_RELEASE_TIME),
                 FloatRange::Skewed {
-                    min: 0.0,
-                    max: 5.0,
-                    factor: FloatRange::skew_factor(-1.75),
+                    min: calculate_filter_coefficient(0.0),
+                    max: calculate_filter_coefficient(5.0),
+                    factor: FloatRange::skew_factor(11.5), // kinda funky but i tried
                 },
             )
             .with_smoother(SmoothingStyle::Linear(10.0))
-            .with_unit(" ms")
-            .with_value_to_string(v2s_rounded_multiplied(3, 1000.0))
+            .with_value_to_string(v2s_time_formatter())
             .with_callback(generate_callback(ReleaseTime, &event_buffer)),
             // KNEE WIDTH
             knee_width: FloatParam::new(
@@ -278,5 +287,20 @@ pub fn v2s_rounded_multiplied(
         } else {
             format!("{v:.digits$}")
         }
+    })
+}
+
+pub fn v2s_time_formatter() -> Arc<dyn Fn(f32) -> String + Send + Sync> {
+    Arc::new(move |value| {
+        // time in MS
+        let t = inverse_calculate_filter_coefficient(value) * 1000.0;
+        let mut unit = "ms";
+        let mut output = t;
+        if t >= 1000.0 {
+            unit = "S";
+            output /= 1000.0;
+        }
+
+        format!("{output:.2} {unit}")
     })
 }
