@@ -10,9 +10,9 @@ use params::CompressorParams;
 
 use std::sync::Arc;
 
-// todo:
-// it kinda sounds lame LOL
-
+// TODO:
+// refactor and remove this level of abstraction
+// i.e. impl Plugin for Compressor (and not CompressorPlugin)
 pub struct CompressorPlugin {
     compressor: Compressor,
 }
@@ -68,8 +68,16 @@ impl Plugin for CompressorPlugin {
         &mut self,
         buffer: &mut Buffer,
         _aux: &mut AuxiliaryBuffers,
-        _context: &mut impl ProcessContext<Self>,
+        context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
+        let sample_rate = context.transport().sample_rate;
+        if self.compressor.rms.sample_rate != sample_rate {
+            self.compressor.rms.sample_rate = sample_rate;
+            self.compressor.rms.buffer_size = (sample_rate * 1e-3) as usize;
+            // TODO:
+            // extend buffer size when sample rate changes
+        }
+
         for mut channel_samples in buffer.iter_samples() {
             for sample in channel_samples.iter_mut() {
                 self.compressor.process(sample);

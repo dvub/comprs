@@ -21,6 +21,9 @@ pub const DEFAULT_KNEE: f32 = 5.0;
 pub const DEFAULT_ATTACK_TIME: f32 = 0.001;
 pub const DEFAULT_RELEASE_TIME: f32 = 0.05;
 
+// TODO:
+// parameterize buffer size for RMS
+
 // "Run Test" (at least, in vscode) will (re-) generate the TS bindings
 #[derive(Deserialize, Serialize, TS, Debug, Clone, PartialEq)]
 #[ts(export_to = "../gui/bindings/Parameter.ts")]

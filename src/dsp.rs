@@ -8,8 +8,8 @@ use nih_plug::util::{db_to_gain, gain_to_db};
 use crate::params::CompressorParams;
 // TODO:
 // make NOT CONSTANT!
-const SAMPLE_RATE: f32 = 44_100.0;
-const BUFFER_SIZE: usize = (SAMPLE_RATE * 1e-3) as usize;
+const DEFAULT_SAMPLE_RATE: f32 = 44_100.0;
+const DEFAULT_BUFFER_SIZE: usize = (DEFAULT_SAMPLE_RATE * 1e-3) as usize;
 
 // TODO:
 // add documentation!!
@@ -19,15 +19,19 @@ const BUFFER_SIZE: usize = (SAMPLE_RATE * 1e-3) as usize;
 // https://www.eecs.qmul.ac.uk/~josh/documents/2012/GiannoulisMassbergReiss-dynamicrangecompression-JAES2012.pdf
 
 /// Struct to represent an RMS level detector. Uses a running sum and circular buffer.
-struct RmsLevelDetector {
+pub struct RmsLevelDetector {
+    pub sample_rate: f32,
+    pub buffer_size: usize,
     squared_sum: f32,
-    buffer: CircularBuffer<BUFFER_SIZE, f32>,
+    pub buffer: Box<circular_buffer::CircularBuffer<DEFAULT_BUFFER_SIZE, f32>>,
 }
 impl Default for RmsLevelDetector {
     fn default() -> Self {
         Self {
+            sample_rate: DEFAULT_SAMPLE_RATE,
+            buffer_size: DEFAULT_BUFFER_SIZE,
             squared_sum: 0.0,
-            buffer: CircularBuffer::<BUFFER_SIZE, f32>::from([0.0; BUFFER_SIZE]),
+            buffer: CircularBuffer::<DEFAULT_BUFFER_SIZE, f32>::boxed(),
         }
     }
 }
@@ -38,12 +42,12 @@ impl RmsLevelDetector {
         self.buffer.push_front(input);
         self.squared_sum += input.powi(2);
         self.squared_sum -= old_sample.powi(2);
+        //
+        // THIS MIGHT BE PROBLEMATIC!
+        //
+        self.squared_sum = self.squared_sum.abs();
 
-        // WORKAROUND...
-        if self.squared_sum.is_sign_negative() {
-            self.squared_sum = 0.0;
-        }
-        (self.squared_sum / BUFFER_SIZE as f32).sqrt()
+        (self.squared_sum / DEFAULT_BUFFER_SIZE as f32).sqrt()
     }
 }
 /// Variants represent the different types of level detection that the compressor may use to update its internal gain.
@@ -60,7 +64,7 @@ pub struct Compressor {
     /// The method of calculating this average gain is controlled by the `level_detection_type` field.
     average_gain: f32,
     /// RMS state.
-    rms: RmsLevelDetector,
+    pub rms: RmsLevelDetector,
     // The type of level detection used to update the internal average gain of the compressor.
     // It is generally suitable and computationally cheaper to use the `Simple` variant, which directly takes into account the input and smooths it.
     // On the other hand, the `Rms` variant computes, well, the RMS of the input, and uses that to keep track of the input signal.
@@ -137,8 +141,6 @@ impl Compressor {
     }
 
     /// Construct a new `Compressor`. For more information on what each field actually does, see the `Compressor` docs.
-    /// ### Parameters
-    // TODO: rewrite documentation lol
     pub fn new(params: Arc<CompressorParams>) -> Self {
         let default_gain = 0.0;
 
@@ -152,9 +154,9 @@ impl Compressor {
 // TODO:
 // tests for sanity check
 pub fn calculate_filter_coefficient(input: f32) -> f32 {
-    (-1.0 / (SAMPLE_RATE * input)).exp()
+    (-1.0 / (DEFAULT_SAMPLE_RATE * input)).exp()
     //1.0 - (-2200.0 / (SAMPLE_RATE * input)).exp()
 }
 pub fn inverse_calculate_filter_coefficient(output_coeff: f32) -> f32 {
-    1.0 / (SAMPLE_RATE * (-output_coeff.ln()))
+    1.0 / (DEFAULT_SAMPLE_RATE * (-output_coeff.ln()))
 }
