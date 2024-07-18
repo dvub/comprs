@@ -3,7 +3,10 @@ use std::sync::Arc;
 use circular_buffer::CircularBuffer;
 // TODO:
 // consider using fast functions
-use nih_plug::util::{db_to_gain, gain_to_db};
+use nih_plug::{
+    params::Param,
+    util::{db_to_gain, gain_to_db},
+};
 
 use crate::params::CompressorParams;
 // TODO:
@@ -69,6 +72,7 @@ impl Compressor {
         let dry_wet = self.params.dry_wet.smoothed.next();
         let input_gain = self.params.input_gain.smoothed.next();
         let output_gain = self.params.output_gain.smoothed.next();
+
         // modify with input gain
         *sample *= input_gain;
         // save a dry copy
