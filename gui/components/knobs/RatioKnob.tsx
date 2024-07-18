@@ -24,7 +24,7 @@ export function RatioKnob() {
       size={144}
       stepFn={(valueRaw: number): number => 0}
       stepLargerFn={(valueRaw: number): number => 0}
-      type="Ratio"
+      parameter="Ratio"
     />
   );
 }

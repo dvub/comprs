@@ -14,7 +14,7 @@ import { sendToPlugin } from "@/lib";
 
 export default function Home() {
   useEffect(() => {
-    sendToPlugin({ type: "Init" });
+    sendToPlugin("Init");
     window.onPluginMessage = (message: ParameterEvent) => {
       let event = new CustomEvent("pluginMessage", { detail: message });
       window.dispatchEvent(event);
@@ -32,7 +32,7 @@ export default function Home() {
           maxValue={30}
           minValue={-30}
           defaultValue={0}
-          type="InputGain"
+          parameter="InputGain"
         />
         {/* middle section, contains [IMO] the most important parameters */}
         <div className="flex gap-3 justify-center">
@@ -48,7 +48,7 @@ export default function Home() {
             maxValue={30}
             minValue={-30}
             defaultValue={0}
-            type="OutputGain"
+            parameter="OutputGain"
           />
         </div>
       </div>
@@ -61,7 +61,7 @@ export default function Home() {
             maxValue={1}
             defaultValue={0.001}
             range={new NormalisableRange(0, 1, 0.01)}
-            type="AttackTime"
+            parameter="AttackTime"
           />
           <TimeKnob
             label="RLS"
@@ -69,7 +69,7 @@ export default function Home() {
             maxValue={5}
             defaultValue={0.05}
             range={new NormalisableRange(0, 5, 0.5)}
-            type="ReleaseTime"
+            parameter="ReleaseTime"
           />
           <KneeKnob />
         </div>

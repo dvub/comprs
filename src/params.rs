@@ -22,7 +22,7 @@ pub const DEFAULT_RELEASE_TIME: f32 = 0.05;
 #[derive(Deserialize, Serialize, TS, Debug, Clone, PartialEq)]
 #[ts(export_to = "../gui/bindings/ParameterEvent.ts")]
 #[ts(export)]
-#[serde(tag = "type")]
+#[serde(tag = "parameter")]
 // TODO:
 // document this
 pub enum ParameterEvent {
@@ -39,10 +39,9 @@ pub enum ParameterEvent {
 #[derive(Deserialize, Serialize, TS)]
 #[ts(export_to = "../gui/bindings/Messages.ts")]
 #[ts(export)]
-#[serde(tag = "type")]
 pub enum Messages {
     Init,
-    ParameterUpdate { event: ParameterEvent },
+    ParameterUpdate(ParameterEvent),
 }
 
 // TODO:

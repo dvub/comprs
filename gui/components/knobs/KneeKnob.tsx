@@ -18,7 +18,7 @@ export function KneeKnob() {
       size={96}
       stepFn={(valueRaw: number): number => 0}
       stepLargerFn={(valueRaw: number): number => 0}
-      type="KneeWidth"
+      parameter="KneeWidth"
     />
   );
 }

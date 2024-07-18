@@ -26,7 +26,7 @@ export function ThresholdKnob() {
       size={144}
       stepFn={(valueRaw: number): number => 0}
       stepLargerFn={(valueRaw: number): number => 0}
-      type="Threshold"
+      parameter="Threshold"
     />
   );
 }

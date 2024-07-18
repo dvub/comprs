@@ -99,7 +99,7 @@ pub fn create_editor(plugin: &mut CompressorPlugin) -> WebViewEditor {
                                 value: params.dry_wet.value(),
                             });
                         }
-                        Messages::ParameterUpdate { event } => {
+                        Messages::ParameterUpdate(event) => {
                             let (param, value) = params.get_param(&event);
 
                             gui_event_buffer.retain(|d| discriminant(d) != discriminant(&event));

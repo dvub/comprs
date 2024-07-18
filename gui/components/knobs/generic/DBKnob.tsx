@@ -15,7 +15,7 @@ export function DBKnob(props: {
   minValue: number;
   maxValue: number;
   defaultValue: number;
-  type: ParameterEvent["type"];
+  parameter: ParameterEvent["parameter"];
 }) {
   const { label, minValue, maxValue, defaultValue } = props;
 
@@ -50,7 +50,7 @@ export function DBKnob(props: {
       valueRawDisplayFn={valueRawDisplayFn}
       size={96}
       range={normalisableRange}
-      type={props.type}
+      parameter={props.parameter}
     />
   );
 }

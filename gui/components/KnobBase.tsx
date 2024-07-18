@@ -38,7 +38,7 @@ type KnobBaseProps = Pick<
   setRawValue: React.Dispatch<React.SetStateAction<number>>;
   size: number;
   range: NormalisableRange;
-  type: ParameterEvent["type"];
+  parameter: ParameterEvent["parameter"];
 };
 
 export function KnobBase(props: KnobBaseProps) {
@@ -55,7 +55,7 @@ export function KnobBase(props: KnobBaseProps) {
     stepLargerFn,
     setRawValue,
     size,
-    type,
+    parameter: type,
     mapTo01 = mapTo01Linear,
     mapFrom01 = mapFrom01Linear,
     valueRaw,
@@ -79,7 +79,7 @@ export function KnobBase(props: KnobBaseProps) {
     const handlePluginMessage = (event: any) => {
       // to get some type safety back, we can add Action here
       const message: ParameterEvent = event.detail;
-      if (message.type === type) {
+      if (message.parameter === type) {
         setRawValue(message.value);
       }
     };
@@ -95,8 +95,7 @@ export function KnobBase(props: KnobBaseProps) {
   function setVal(valueRaw: number) {
     setRawValue(valueRaw);
     sendToPlugin({
-      type: "ParameterUpdate",
-      event: { type: type, value: valueRaw },
+      ParameterUpdate: { parameter: type, value: valueRaw },
     });
   }
 
