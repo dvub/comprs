@@ -20,6 +20,7 @@ pub const MIN_BUFFER_SIZE: f32 = 0.001;
 // refactor and remove this level of abstraction
 // i.e. impl Plugin for Compressor (and not CompressorPlugin)
 pub struct CompressorPlugin {
+    sample_rate: f32,
     params: Arc<CompressorParams>,
     compressors: [Compressor; 2],
 }
@@ -27,6 +28,7 @@ pub struct CompressorPlugin {
 impl Default for CompressorPlugin {
     fn default() -> Self {
         Self {
+            sample_rate: 44_100.0,
             params: Arc::new(CompressorParams::default()),
             // TODO: FIX THIS LMAO
             compressors: [Compressor::new(), Compressor::new()],
@@ -75,8 +77,8 @@ impl Plugin for CompressorPlugin {
 
         // update sample rate :3
         let sample_rate = buffer_config.sample_rate;
+        self.sample_rate = sample_rate;
         for compressor in &mut self.compressors {
-            compressor.rms.sample_rate = sample_rate;
             let max_buffer_length = (sample_rate * MAX_BUFFER_SIZE) as usize;
             compressor.rms.buffer = VecDeque::with_capacity(max_buffer_length);
 
@@ -108,7 +110,7 @@ impl Plugin for CompressorPlugin {
 
             let new_buffer_size = self.params.buffer_size.value();
             for compressor in &mut self.compressors {
-                let n = (compressor.rms.sample_rate * new_buffer_size) as usize;
+                let n = (self.sample_rate * new_buffer_size) as usize;
                 compressor.rms.buffer.resize_with(n, || 0.0);
             }
         }

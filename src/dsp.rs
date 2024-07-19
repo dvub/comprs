@@ -17,7 +17,6 @@ const DEFAULT_SAMPLE_RATE: f32 = 44_100.0;
 
 /// Struct to represent an RMS level detector. Uses a running sum and circular buffer.
 pub struct RmsLevelDetector {
-    pub sample_rate: f32,
     squared_sum: f32,
     pub buffer: VecDeque<f32>,
 }
@@ -25,7 +24,6 @@ impl Default for RmsLevelDetector {
     fn default() -> Self {
         let buffer_length = (DEFAULT_SAMPLE_RATE * DEFAULT_BUFFER_SIZE) as usize;
         Self {
-            sample_rate: DEFAULT_SAMPLE_RATE,
             squared_sum: 0.0,
             buffer: VecDeque::from(vec![0.0; buffer_length]),
         }
@@ -155,10 +153,9 @@ impl Compressor {
 }
 // TODO:
 // tests for sanity check
-pub fn calculate_filter_coefficient(input: f32) -> f32 {
-    (-1.0 / (DEFAULT_SAMPLE_RATE * input)).exp()
-    //1.0 - (-2200.0 / (SAMPLE_RATE * input)).exp()
+pub fn calculate_filter_coefficient(input: f32, sample_rate: f32) -> f32 {
+    (-1.0 / (sample_rate * input)).exp()
 }
-pub fn calculate_time_from_coefficient(output_coeff: f32) -> f32 {
-    1.0 / (DEFAULT_SAMPLE_RATE * (-output_coeff.ln()))
+pub fn calculate_time_from_coefficient(output_coeff: f32, sample_rate: f32) -> f32 {
+    1.0 / (sample_rate * (-output_coeff.ln()))
 }
