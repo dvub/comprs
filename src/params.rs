@@ -1,5 +1,5 @@
 use crate::{
-    dsp::{calculate_filter_coefficient, inverse_calculate_filter_coefficient},
+    dsp::{calculate_filter_coefficient, calculate_time_from_coefficient},
     params::Parameter::*,
 };
 use nih_plug::{
@@ -296,7 +296,7 @@ pub fn v2s_rounded_multiplied(
 pub fn v2s_time_formatter() -> Arc<dyn Fn(f32) -> String + Send + Sync> {
     Arc::new(move |value| {
         // time in MS
-        let t = inverse_calculate_filter_coefficient(value) * 1000.0;
+        let t = calculate_time_from_coefficient(value) * 1000.0;
         let mut unit = "ms";
         let mut output = t;
         if t >= 1000.0 {

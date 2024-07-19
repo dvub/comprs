@@ -10,11 +10,9 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", features = [
-    "assert_process_allocs",
-] }
+# I normally 
+nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git" }
 atomic_float = "0.1"
-circular-buffer = "0.1.6"
 plotters = "0.3.5"
 rand = "0.8.5"
 ts-rs = "9.0.1"

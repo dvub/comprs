@@ -421,12 +421,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "circular-buffer"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da987586004ae7c43b7df5e3f7693775068522e1086f8d9b2d74c778a0f43313"
-
-[[package]]
 name = "clang-sys"
 version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -556,7 +550,6 @@ name = "comprs"
 version = "0.1.0"
 dependencies = [
  "atomic_float",
- "circular-buffer",
  "nih_plug",
  "nih_plug_webview",
  "plotters",

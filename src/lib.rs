@@ -3,13 +3,12 @@ pub mod editor;
 
 mod params;
 
-use circular_buffer::CircularBuffer;
 use dsp::Compressor;
 use editor::create_editor;
-use nih_plug::{buffer, prelude::*};
+use nih_plug::prelude::*;
 use params::CompressorParams;
 
-use std::sync::Arc;
+use std::{collections::VecDeque, sync::Arc};
 
 // TODO:
 // refactor and remove this level of abstraction
@@ -71,14 +70,19 @@ impl Plugin for CompressorPlugin {
         _aux: &mut AuxiliaryBuffers,
         context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
+        // update RMS buffer size if sample rate changes
+        // TODO: does this need to be optimized?
         let sample_rate = context.transport().sample_rate;
         if self.compressor.rms.sample_rate != sample_rate {
+            println!("Sample rate changed..");
+
+            let new_buffer_size = (sample_rate * 1e-3) as usize;
+
             self.compressor.rms.sample_rate = sample_rate;
-            let buffer_size = (sample_rate * 1e-3) as usize;
-            // TODO:
-            // extend buffer size when sample rate changes
+            self.compressor.rms.buffer = VecDeque::from(vec![0.0; new_buffer_size]);
         }
 
+        // apply compression
         for mut channel_samples in buffer.iter_samples() {
             for sample in channel_samples.iter_mut() {
                 self.compressor.process(sample);
