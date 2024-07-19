@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, sync::Arc};
+use std::collections::VecDeque;
 
 // TODO:
 // consider using fast functions
@@ -39,8 +39,12 @@ impl RmsLevelDetector {
         self.squared_sum += input.powi(2);
         self.squared_sum -= old_sample.powi(2);
         //
-        // THIS MIGHT BE PROBLEMATIC!
+        // really weird workaround lol
+        // sometimes (for some reason), squared_sum can be negative, and square rooting a negative leads to NaN
         //
+        // when the compressor's gain state is NaN, the compressor will just never compress
+        // TODO:
+        // panic on nan
         self.squared_sum = self.squared_sum.max(0.0);
 
         (self.squared_sum / self.buffer.len() as f32).sqrt()
@@ -55,7 +59,6 @@ pub enum LevelDetectionType {
 */
 /// Struct to represent a dynamic range compressor. See documentation for each field to learn more.
 pub struct Compressor {
-    pub params: Arc<CompressorParams>,
     /// Average input gain *in linear space*.
     /// The method of calculating this average gain is controlled by the `level_detection_type` field.
     average_gain: f32,
@@ -70,17 +73,25 @@ pub struct Compressor {
 
 impl Compressor {
     /// Processes a single input sample and returns the processed sample.
-    pub fn process(&mut self, sample: &mut f32) {
-        let dry_wet = self.params.dry_wet.smoothed.next();
-        let input_gain = self.params.input_gain.smoothed.next();
-        let output_gain = self.params.output_gain.smoothed.next();
+    pub fn process(&mut self, sample: &mut f32, params: &CompressorParams) {
+        // TODO:
+        // this is so bad :sob:
+        let input_gain = params.input_gain.smoothed.next();
+        let output_gain = params.output_gain.smoothed.next();
+        let attack_coeff = params.attack_time.smoothed.next();
+        let release_coeff = params.release_time.smoothed.next();
+        let dry_wet = params.dry_wet.smoothed.next();
+        let threshold = params.threshold.smoothed.next();
+        let ratio = params.ratio.smoothed.next();
+        let knee_width = params.knee_width.smoothed.next();
+
         // modify with input gain
         *sample *= input_gain;
         // save a dry copy
         let pre_processed = *sample;
         // save a wet copy
-        self.update_gain(*sample);
-        let c = self.calculate_gain_reduction();
+        self.update_gain(*sample, attack_coeff, release_coeff);
+        let c = self.calculate_gain_reduction(threshold, ratio, knee_width);
         let processed = *sample * c;
         // blend based on dry_wet
         let mut blended_output = (1.0 - dry_wet) * pre_processed + dry_wet * processed;
@@ -92,15 +103,15 @@ impl Compressor {
     }
 
     /// Updates the internal gain of the compressor given an input sample.
-    fn update_gain(&mut self, sample: f32) {
+    fn update_gain(&mut self, sample: f32, attack_coeff: f32, release_coeff: f32) {
         let avg_gain = self.average_gain;
         // choose the input based on the desired level detection method
         let new_gain = self.rms.calculate_rms(sample);
         // based on if our incoming signal is increasing or decreasing, choose the filter coefficent to use.
         let theta = if new_gain > avg_gain {
-            self.params.attack_time.smoothed.next()
+            attack_coeff
         } else {
-            self.params.release_time.smoothed.next()
+            release_coeff
         };
 
         let n = (1.0 - theta) * new_gain + theta * avg_gain;
@@ -109,10 +120,7 @@ impl Compressor {
 
     /// This function converts the internal average gain of the compressor to decibels, then uses a soft-knee equation to calculate the gain reduction.
     /// Returns a factor to multiply the input signal by.
-    fn calculate_gain_reduction(&mut self) -> f32 {
-        let threshold = self.params.threshold.smoothed.next();
-        let ratio = self.params.ratio.smoothed.next();
-        let knee_width = self.params.knee_width.smoothed.next();
+    fn calculate_gain_reduction(&mut self, threshold: f32, ratio: f32, knee_width: f32) -> f32 {
         // first, we need to convert our gain to decibels.
         let input_db = gain_to_db(self.average_gain);
         // GAIN COMPUTER
@@ -137,11 +145,9 @@ impl Compressor {
     }
 
     /// Construct a new `Compressor`. For more information on what each field actually does, see the `Compressor` docs.
-    pub fn new(params: Arc<CompressorParams>) -> Self {
+    pub fn new() -> Self {
         let default_gain = 0.0;
-
         Compressor {
-            params,
             average_gain: default_gain,
             rms: RmsLevelDetector::default(),
         }

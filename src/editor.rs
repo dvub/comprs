@@ -1,4 +1,4 @@
-use std::mem::discriminant;
+use std::{mem::discriminant, sync::Arc};
 
 use nih_plug::nih_log;
 use nih_plug_webview::{
@@ -6,17 +6,13 @@ use nih_plug_webview::{
 };
 use serde_json::json;
 
-use crate::{
-    params::{
-        Messages,
-        Parameter::{self, *},
-    },
-    CompressorPlugin,
+use crate::params::{
+    CompressorParams, Messages,
+    Parameter::{self, *},
 };
 
-pub fn create_editor(plugin: &mut CompressorPlugin) -> WebViewEditor {
-    let params = plugin.compressor.params.clone();
-    let event_buffer = plugin.compressor.params.event_buffer.clone();
+pub fn create_editor(params: Arc<CompressorParams>) -> WebViewEditor {
+    let event_buffer = params.event_buffer.clone();
 
     let size = (750, 500);
 

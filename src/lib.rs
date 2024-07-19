@@ -20,13 +20,16 @@ pub const MIN_BUFFER_SIZE: f32 = 0.001;
 // refactor and remove this level of abstraction
 // i.e. impl Plugin for Compressor (and not CompressorPlugin)
 pub struct CompressorPlugin {
-    compressor: Compressor,
+    params: Arc<CompressorParams>,
+    compressors: [Compressor; 2],
 }
 
 impl Default for CompressorPlugin {
     fn default() -> Self {
         Self {
-            compressor: Compressor::new(Arc::new(CompressorParams::default())),
+            params: Arc::new(CompressorParams::default()),
+            // TODO: FIX THIS LMAO
+            compressors: [Compressor::new(), Compressor::new()],
         }
     }
 }
@@ -58,7 +61,7 @@ impl Plugin for CompressorPlugin {
     type BackgroundTask = ();
 
     fn params(&self) -> Arc<dyn Params> {
-        self.compressor.params.clone()
+        self.params.clone()
     }
 
     fn initialize(
@@ -72,13 +75,14 @@ impl Plugin for CompressorPlugin {
 
         // update sample rate :3
         let sample_rate = buffer_config.sample_rate;
+        for compressor in &mut self.compressors {
+            compressor.rms.sample_rate = sample_rate;
+            let max_buffer_length = (sample_rate * MAX_BUFFER_SIZE) as usize;
+            compressor.rms.buffer = VecDeque::with_capacity(max_buffer_length);
 
-        self.compressor.rms.sample_rate = sample_rate;
-        let max_buffer_length = (sample_rate * MAX_BUFFER_SIZE) as usize;
-        self.compressor.rms.buffer = VecDeque::with_capacity(max_buffer_length);
-
-        let n = (sample_rate * DEFAULT_BUFFER_SIZE) as usize;
-        self.compressor.rms.buffer.resize_with(n, || 0.0);
+            let n = (sample_rate * DEFAULT_BUFFER_SIZE) as usize;
+            compressor.rms.buffer.resize_with(n, || 0.0);
+        }
 
         true
     }
@@ -90,29 +94,30 @@ impl Plugin for CompressorPlugin {
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
         // apply compression
+        let num_channels = buffer.channels();
+
         for mut channel_samples in buffer.iter_samples() {
-            for sample in channel_samples.iter_mut() {
-                self.compressor.process(sample);
+            for i in 0..num_channels {
+                let sample = channel_samples.get_mut(i).unwrap();
+                self.compressors[i].process(sample, &self.params);
             }
         }
 
-        if self
-            .compressor
-            .params
-            .rms_update
-            .swap(false, Ordering::Relaxed)
-        {
+        if self.params.rms_update.swap(false, Ordering::Relaxed) {
             println!("Changing buffer size...");
-            let new_buffer_size = self.compressor.params.buffer_size.value();
-            let n = (self.compressor.rms.sample_rate * new_buffer_size) as usize;
-            self.compressor.rms.buffer.resize_with(n, || 0.0);
+
+            let new_buffer_size = self.params.buffer_size.value();
+            for compressor in &mut self.compressors {
+                let n = (compressor.rms.sample_rate * new_buffer_size) as usize;
+                compressor.rms.buffer.resize_with(n, || 0.0);
+            }
         }
 
         ProcessStatus::Normal
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        let editor = create_editor(self);
+        let editor = create_editor(self.params.clone());
         Some(Box::new(editor))
     }
 }
