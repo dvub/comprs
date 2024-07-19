@@ -4,10 +4,10 @@ use std::{collections::VecDeque, sync::Arc};
 // consider using fast functions
 use nih_plug::util::{db_to_gain, gain_to_db};
 
-use crate::params::CompressorParams;
+use crate::{params::CompressorParams, DEFAULT_BUFFER_SIZE};
 
 const DEFAULT_SAMPLE_RATE: f32 = 44_100.0;
-const _DEFAULT_BUFFER_SIZE: usize = (DEFAULT_SAMPLE_RATE * 1e-3) as usize;
+
 // TODO:
 // add documentation!!
 
@@ -23,8 +23,7 @@ pub struct RmsLevelDetector {
 }
 impl Default for RmsLevelDetector {
     fn default() -> Self {
-        let buffer_size = 1e-3;
-        let buffer_length = (DEFAULT_SAMPLE_RATE * buffer_size) as usize;
+        let buffer_length = (DEFAULT_SAMPLE_RATE * DEFAULT_BUFFER_SIZE) as usize;
         Self {
             sample_rate: DEFAULT_SAMPLE_RATE,
             squared_sum: 0.0,

@@ -1,4 +1,4 @@
-use std::{env::current_dir, mem::discriminant};
+use std::mem::discriminant;
 
 use nih_plug::nih_log;
 use nih_plug_webview::{

@@ -1,6 +1,7 @@
 use crate::{
     dsp::{calculate_filter_coefficient, calculate_time_from_coefficient},
     params::Parameter::*,
+    DEFAULT_BUFFER_SIZE, MAX_BUFFER_SIZE, MIN_BUFFER_SIZE,
 };
 use nih_plug::{
     formatters::{self, v2s_f32_rounded},
@@ -11,7 +12,10 @@ use nih_plug::{
 use serde::{Deserialize, Serialize};
 use std::{
     mem::discriminant,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
 };
 use ts_rs::TS;
 
@@ -63,7 +67,7 @@ const NUM_PARAMETERS: usize = 8;
 #[derive(Params)]
 pub struct CompressorParams {
     pub event_buffer: Arc<Mutex<Vec<Parameter>>>,
-
+    pub rms_update: Arc<AtomicBool>,
     /// The threshold at which to begin applying compression **in decibels.**
     /// For example, a compressor with a threshold of -10db would (for the most part) compress when *the level* above -10db.
     ///
@@ -101,6 +105,9 @@ pub struct CompressorParams {
     /// while `0.0` (0%) means that essentially, no compression is applied.  
     #[id = "drywet"]
     pub dry_wet: FloatParam,
+
+    #[id = "bufsize"]
+    pub buffer_size: FloatParam,
 }
 
 impl CompressorParams {
@@ -146,6 +153,12 @@ fn generate_callback(
 impl Default for CompressorParams {
     fn default() -> Self {
         let event_buffer = Arc::new(Mutex::new(Vec::with_capacity(NUM_PARAMETERS)));
+        let rms_update = Arc::new(AtomicBool::new(false));
+        let rms_update_clone = rms_update.clone();
+        let callback = Arc::new(move |_: f32| {
+            rms_update_clone.store(true, Ordering::Relaxed);
+        });
+
         // I mostly just played around with other compressors and got a feel for their paramters
         // I spent way too much time tuning these
         Self {
@@ -271,6 +284,17 @@ impl Default for CompressorParams {
                 .with_unit("%")
                 .with_value_to_string(v2s_rounded_multiplied(1, 100.0))
                 .with_callback(generate_callback(DryWet, &event_buffer)),
+            buffer_size: FloatParam::new(
+                "RMS Buffer Size",
+                DEFAULT_BUFFER_SIZE,
+                FloatRange::Linear {
+                    min: MIN_BUFFER_SIZE,
+                    max: MAX_BUFFER_SIZE,
+                },
+            )
+            .with_callback(callback)
+            .with_value_to_string(v2s_buffer_size_formatter()),
+            rms_update,
             event_buffer,
         }
     }
@@ -297,6 +321,21 @@ pub fn v2s_time_formatter() -> Arc<dyn Fn(f32) -> String + Send + Sync> {
     Arc::new(move |value| {
         // time in MS
         let t = calculate_time_from_coefficient(value) * 1000.0;
+        let mut unit = "ms";
+        let mut output = t;
+        if t >= 1000.0 {
+            unit = "S";
+            output /= 1000.0;
+        }
+
+        format!("{output:.2} {unit}")
+    })
+}
+
+pub fn v2s_buffer_size_formatter() -> Arc<dyn Fn(f32) -> String + Send + Sync> {
+    Arc::new(move |value| {
+        // from S to MS
+        let t = value * 1000.0;
         let mut unit = "ms";
         let mut output = t;
         if t >= 1000.0 {
