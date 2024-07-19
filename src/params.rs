@@ -1,8 +1,4 @@
-use crate::{
-    dsp::{calculate_filter_coefficient, calculate_time_from_coefficient},
-    params::Parameter::*,
-    DEFAULT_BUFFER_SIZE, MAX_BUFFER_SIZE, MIN_BUFFER_SIZE,
-};
+use crate::{params::Parameter::*, DEFAULT_BUFFER_SIZE, MAX_BUFFER_SIZE, MIN_BUFFER_SIZE};
 use nih_plug::{
     formatters::{self, v2s_f32_rounded},
     params::{FloatParam, Params},
@@ -160,9 +156,6 @@ impl Default for CompressorParams {
             v.store(true, Ordering::Relaxed);
         });
 
-        // TODO: GET THIS RIGHT
-        let sample_rate = 44_100.0;
-
         // I mostly just played around with other compressors and got a feel for their paramters
         // I spent way too much time tuning these
         Self {
@@ -206,29 +199,29 @@ impl Default for CompressorParams {
             // ATTACK TIME
             attack_time: FloatParam::new(
                 "Attack Time",
-                calculate_filter_coefficient(DEFAULT_ATTACK_TIME, sample_rate),
+                DEFAULT_ATTACK_TIME,
                 FloatRange::Skewed {
-                    min: calculate_filter_coefficient(0.0, sample_rate), // 0 seconds atk time, meaning the compressor takes effect instantly
-                    max: calculate_filter_coefficient(1.0, sample_rate),
-                    factor: FloatRange::skew_factor(5.0), // just happened to be right in the middle
+                    min: 0.0, // 0 seconds atk time, meaning the compressor takes effect instantly
+                    max: 1.0,
+                    factor: FloatRange::skew_factor(-2.0), // just happened to be right in the middle
                 },
             )
             .with_smoother(SmoothingStyle::Linear(10.0))
-            .with_value_to_string(v2s_time_formatter(sample_rate))
+            .with_value_to_string(v2s_time_formatter())
             .with_callback(generate_callback(AttackTime, &event_buffer)),
 
             // RELEASE
             release_time: FloatParam::new(
                 "Release Time",
-                calculate_filter_coefficient(DEFAULT_RELEASE_TIME, sample_rate),
+                DEFAULT_RELEASE_TIME,
                 FloatRange::Skewed {
-                    min: calculate_filter_coefficient(0.0, sample_rate),
-                    max: calculate_filter_coefficient(5.0, sample_rate),
-                    factor: FloatRange::skew_factor(11.5), // kinda funky but i tried
+                    min: 0.0,
+                    max: 5.0,
+                    factor: FloatRange::skew_factor(-2.25), // kinda funky but i tried
                 },
             )
             .with_smoother(SmoothingStyle::Linear(10.0))
-            .with_value_to_string(v2s_time_formatter(sample_rate))
+            .with_value_to_string(v2s_time_formatter())
             .with_callback(generate_callback(ReleaseTime, &event_buffer)),
             // KNEE WIDTH
             knee_width: FloatParam::new(
@@ -321,10 +314,10 @@ pub fn v2s_rounded_multiplied(
     })
 }
 
-pub fn v2s_time_formatter(sample_rate: f32) -> Arc<dyn Fn(f32) -> String + Send + Sync> {
+pub fn v2s_time_formatter() -> Arc<dyn Fn(f32) -> String + Send + Sync> {
     Arc::new(move |value| {
         // time in MS
-        let t = calculate_time_from_coefficient(value, sample_rate) * 1000.0;
+        let t = value * 1000.0;
         let mut unit = "ms";
         let mut output = t;
         if t >= 1000.0 {

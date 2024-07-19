@@ -13,12 +13,15 @@ use std::{
     sync::{atomic::Ordering, Arc},
 };
 
+// general todo:
+// implement some sort of control for lookahead
+
+// TODO:
+// find a place for these consts or remove them
 pub const MAX_BUFFER_SIZE: f32 = 0.03;
 pub const DEFAULT_BUFFER_SIZE: f32 = 0.01;
 pub const MIN_BUFFER_SIZE: f32 = 0.001;
-// TODO:
-// refactor and remove this level of abstraction
-// i.e. impl Plugin for Compressor (and not CompressorPlugin)
+
 pub struct CompressorPlugin {
     sample_rate: f32,
     params: Arc<CompressorParams>,
@@ -105,6 +108,8 @@ impl Plugin for CompressorPlugin {
             }
         }
 
+        // TODO:
+        // there seems to be a bug when setting the buffer size tro a large value and then turning it back down
         if self.params.rms_update.swap(false, Ordering::Relaxed) {
             println!("Changing buffer size...");
 

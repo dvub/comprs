@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 // TODO:
 // consider using fast functions
-use nih_plug::util::{db_to_gain, gain_to_db};
+use nih_plug::util::{db_to_gain, db_to_gain_fast, gain_to_db, gain_to_db_fast};
 
 use crate::{params::CompressorParams, DEFAULT_BUFFER_SIZE};
 
@@ -76,8 +76,10 @@ impl Compressor {
         // this is so bad :sob:
         let input_gain = params.input_gain.smoothed.next();
         let output_gain = params.output_gain.smoothed.next();
-        let attack_coeff = params.attack_time.smoothed.next();
-        let release_coeff = params.release_time.smoothed.next();
+        let attack_coeff =
+            calculate_filter_coefficient(params.attack_time.smoothed.next(), 44_100.0);
+        let release_coeff =
+            calculate_filter_coefficient(params.release_time.smoothed.next(), 44_100.0);
         let dry_wet = params.dry_wet.smoothed.next();
         let threshold = params.threshold.smoothed.next();
         let ratio = params.ratio.smoothed.next();
@@ -120,7 +122,8 @@ impl Compressor {
     /// Returns a factor to multiply the input signal by.
     fn calculate_gain_reduction(&mut self, threshold: f32, ratio: f32, knee_width: f32) -> f32 {
         // first, we need to convert our gain to decibels.
-        let input_db = gain_to_db(self.average_gain);
+        let input_db = gain_to_db_fast(self.average_gain);
+
         // GAIN COMPUTER
         let reduced_db = {
             let difference = input_db - threshold;
@@ -139,7 +142,7 @@ impl Compressor {
         // to be totally honest, i'm not sure why this has to be done.
         let final_db = reduced_db - input_db;
         // convert back to linear space as a factor to multiply the input
-        db_to_gain(final_db)
+        db_to_gain_fast(final_db)
     }
 
     /// Construct a new `Compressor`. For more information on what each field actually does, see the `Compressor` docs.
@@ -155,7 +158,4 @@ impl Compressor {
 // tests for sanity check
 pub fn calculate_filter_coefficient(input: f32, sample_rate: f32) -> f32 {
     (-1.0 / (sample_rate * input)).exp()
-}
-pub fn calculate_time_from_coefficient(output_coeff: f32, sample_rate: f32) -> f32 {
-    1.0 / (sample_rate * (-output_coeff.ln()))
 }
