@@ -45,7 +45,7 @@ impl RmsLevelDetector {
         //
         // THIS MIGHT BE PROBLEMATIC!
         //
-        self.squared_sum = self.squared_sum.abs();
+        self.squared_sum = self.squared_sum.max(0.0);
 
         (self.squared_sum / DEFAULT_BUFFER_SIZE as f32).sqrt()
     }
