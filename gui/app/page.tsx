@@ -6,11 +6,11 @@ import { RatioKnob } from "@/components/knobs/RatioKnob";
 import { ThresholdKnob } from "@/components/knobs/ThresholdKnob";
 import { NormalisableRange } from "@/lib/utils";
 import React, { useEffect, useLayoutEffect } from "react";
-import { DryWetKnob } from "@/components/knobs/DryWetKnob";
 import { KneeKnob } from "@/components/knobs/KneeKnob";
 import { DBKnob } from "@/components/knobs/generic/DBKnob";
 import { Parameter } from "@/bindings/Parameter";
 import { sendToPlugin } from "@/lib";
+import { PercentKnob } from "@/components/knobs/generic/PercentKnob";
 
 export default function Home() {
   useEffect(() => {
@@ -45,7 +45,15 @@ export default function Home() {
         </div>
         {/* this div contains output-related knobs */}
         <div>
-          <DryWetKnob />
+          <PercentKnob
+            label="DRYWET"
+            size={96}
+            minValue={0}
+            maxValue={1}
+            defaultValue={1}
+            range={new NormalisableRange(0, 1, 0.5)}
+            parameter="DryWet"
+          />
           <DBKnob
             label="OUT"
             maxValue={30}
@@ -57,7 +65,7 @@ export default function Home() {
       </div>
       {/* bottom section, just kinda put misc params here */}
       <div className="h-[25%] w-full flex justify-center">
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
           <TimeKnob
             label="ATK"
             minValue={0}
@@ -75,6 +83,18 @@ export default function Home() {
             parameter="ReleaseTime"
           />
           <KneeKnob />
+          {/* RMS CONTROLS */}
+          <div className="">
+            <PercentKnob
+              label="RMS%"
+              minValue={0}
+              maxValue={1}
+              defaultValue={0}
+              range={new NormalisableRange(0, 1, 0.5)}
+              parameter="RmsMix"
+              size={64}
+            />
+          </div>
         </div>
       </div>
     </main>

@@ -292,7 +292,7 @@ impl Default for CompressorParams {
                 .with_value_to_string(v2s_rounded_multiplied(1))
                 .with_callback(generate_callback(DryWet, &event_buffer)),
             rms_buffer_size: FloatParam::new(
-                "RMS Buffer Length",
+                "RMS Size",
                 DEFAULT_BUFFER_SIZE,
                 FloatRange::Linear {
                     min: 0.001,
@@ -300,7 +300,8 @@ impl Default for CompressorParams {
                 },
             )
             .with_value_to_string(v2s_buffer_size_formatter())
-            .with_smoother(SmoothingStyle::Linear(10.0)),
+            .with_smoother(SmoothingStyle::Linear(10.0))
+            .with_callback(generate_callback(RmsBufferSize, &event_buffer)),
 
             // LOOKEAHEAD
             lookahead: FloatParam::new(
@@ -312,12 +313,14 @@ impl Default for CompressorParams {
                 },
             )
             .with_value_to_string(v2s_buffer_size_formatter())
-            .with_smoother(SmoothingStyle::Linear(10.0)),
+            .with_smoother(SmoothingStyle::Linear(10.0))
+            .with_callback(generate_callback(Lookahead, &event_buffer)),
 
             // RMS MIX
             rms_mix: FloatParam::new("RMS Mix", 0.0, FloatRange::Linear { min: 0.0, max: 1.0 })
                 .with_value_to_string(v2s_rounded_multiplied(1))
-                .with_smoother(SmoothingStyle::Linear(10.0)),
+                .with_smoother(SmoothingStyle::Linear(10.0))
+                .with_callback(generate_callback(RmsMix, &event_buffer)),
 
             event_buffer,
         }
