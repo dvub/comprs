@@ -1,4 +1,4 @@
-use crate::{params::Parameter::*, DEFAULT_BUFFER_SIZE, MAX_BUFFER_SIZE, MIN_BUFFER_SIZE};
+use crate::{params::Parameter::*, MAX_BUFFER_SIZE};
 use nih_plug::{
     formatters::{self, v2s_f32_rounded},
     params::{FloatParam, Params},
@@ -8,10 +8,7 @@ use nih_plug::{
 use serde::{Deserialize, Serialize};
 use std::{
     mem::discriminant,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
-    },
+    sync::{Arc, Mutex},
 };
 use ts_rs::TS;
 
@@ -20,6 +17,7 @@ pub const DEFAULT_RATIO: f32 = 4.0;
 pub const DEFAULT_KNEE: f32 = 5.0;
 pub const DEFAULT_ATTACK_TIME: f32 = 0.001;
 pub const DEFAULT_RELEASE_TIME: f32 = 0.05;
+pub const DEFAULT_BUFFER_SIZE: f32 = 0.01;
 
 // TODO:
 // parameterize buffer size for RMS
@@ -278,14 +276,13 @@ impl Default for CompressorParams {
 
             dry_wet: FloatParam::new("Dry/Wet", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 }) // 1.0 default for full compressor effect
                 .with_smoother(SmoothingStyle::Linear(10.0))
-                .with_unit("%")
-                .with_value_to_string(v2s_rounded_multiplied(1, 100.0))
+                .with_value_to_string(v2s_rounded_multiplied(1))
                 .with_callback(generate_callback(DryWet, &event_buffer)),
             buffer_size: FloatParam::new(
-                "RMS Buffer Size",
+                "RMS Buffer Length",
                 DEFAULT_BUFFER_SIZE,
                 FloatRange::Linear {
-                    min: MIN_BUFFER_SIZE,
+                    min: 0.001,
                     max: MAX_BUFFER_SIZE,
                 },
             )
@@ -293,13 +290,15 @@ impl Default for CompressorParams {
 
             lookahead: FloatParam::new(
                 "Lookahead",
-                DEFAULT_BUFFER_SIZE,
+                0.0,
                 FloatRange::Linear {
                     min: 0.0,
                     max: MAX_BUFFER_SIZE,
                 },
-            ),
-            rms_mix: FloatParam::new("RMS Mix", 0.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
+            )
+            .with_value_to_string(v2s_buffer_size_formatter()),
+            rms_mix: FloatParam::new("RMS Mix", 0.0, FloatRange::Linear { min: 0.0, max: 1.0 })
+                .with_value_to_string(v2s_rounded_multiplied(1)),
 
             event_buffer,
         }
@@ -307,18 +306,15 @@ impl Default for CompressorParams {
 }
 // very slightly modified NIH-plug formatter
 
-pub fn v2s_rounded_multiplied(
-    digits: usize,
-    multiplier: f32,
-) -> Arc<dyn Fn(f32) -> String + Send + Sync> {
+pub fn v2s_rounded_multiplied(digits: usize) -> Arc<dyn Fn(f32) -> String + Send + Sync> {
     let rounding_multiplier = 10u32.pow(digits as u32) as f32;
     Arc::new(move |value| {
-        let v = value * multiplier;
+        let v = value * 100.0;
         // See above
         if (v * rounding_multiplier).round() / rounding_multiplier == 0.0 {
-            format!("{:.digits$}", 0.0)
+            format!("{:.digits$}%", 0.0)
         } else {
-            format!("{v:.digits$}")
+            format!("{v:.digits$}%")
         }
     })
 }

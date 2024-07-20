@@ -10,15 +10,7 @@ use params::CompressorParams;
 
 use std::{collections::VecDeque, sync::Arc};
 
-// general todo:
-// implement some sort of control for lookahead
-
-// TODO:
-// find a place for these consts or remove them
 pub const MAX_BUFFER_SIZE: f32 = 0.03;
-pub const DEFAULT_BUFFER_SIZE: f32 = 0.01;
-pub const MIN_BUFFER_SIZE: f32 = 0.001;
-pub const DEFAULT_SAMPLE_RATE: f32 = 44_100.0;
 
 pub struct CompressorPlugin {
     sample_rate: f32,
@@ -30,7 +22,8 @@ pub struct CompressorPlugin {
 impl Default for CompressorPlugin {
     fn default() -> Self {
         Self {
-            sample_rate: DEFAULT_SAMPLE_RATE,
+            // this doesn't really matter, as long as we set everything correctly in initialize()
+            sample_rate: 0.0,
             params: Arc::new(CompressorParams::default()),
             // TODO: FIX THIS LMAO
             compressors: [Compressor::new(), Compressor::new()],

@@ -1,10 +1,7 @@
 use nih_plug::util::{db_to_gain_fast, gain_to_db_fast};
 use std::collections::VecDeque;
 
-use crate::{params::CompressorParams, DEFAULT_BUFFER_SIZE};
-
-const DEFAULT_SAMPLE_RATE: f32 = 44_100.0;
-
+use crate::params::CompressorParams;
 // https://www.musicdsp.org/en/latest/Effects/169-compressor.html (not the best source)
 // recommended:
 // https://www.eecs.qmul.ac.uk/~josh/documents/2012/GiannoulisMassbergReiss-dynamicrangecompression-JAES2012.pdf
@@ -16,10 +13,9 @@ pub struct RmsLevelDetector {
 }
 impl Default for RmsLevelDetector {
     fn default() -> Self {
-        let buffer_length = (DEFAULT_SAMPLE_RATE * DEFAULT_BUFFER_SIZE) as usize;
         Self {
             squared_sum: 0.0,
-            buffer: VecDeque::from(vec![0.0; buffer_length]),
+            buffer: VecDeque::new(),
         }
     }
 }
@@ -67,41 +63,46 @@ impl Compressor {
         shared_rms: &mut RmsLevelDetector,
         sample_rate: f32,
     ) {
-        // TODO:
-        // this is so bad :sob:
         let input_gain = params.input_gain.smoothed.next();
-        let output_gain = params.output_gain.smoothed.next();
+        *sample *= input_gain;
 
+        let output_gain = params.output_gain.smoothed.next();
         let dry_wet = params.dry_wet.smoothed.next();
+
         let threshold = params.threshold.smoothed.next();
         let ratio = params.ratio.smoothed.next();
         let knee_width = params.knee_width.smoothed.next();
 
+        // TODO:
+        // there might be a way to optimize this..
         let attack_coeff =
             calculate_filter_coefficient(params.attack_time.smoothed.next(), sample_rate);
         let release_coeff =
             calculate_filter_coefficient(params.release_time.smoothed.next(), sample_rate);
 
+        // blends the shared/independent RMS
         let rms_mix = params.rms_mix.value();
         self.update_gain(*sample, shared_rms, rms_mix, attack_coeff, release_coeff);
 
-        let t = params.lookahead.value();
-        let mut i = (sample_rate * t) as usize;
-        i = i.saturating_sub(1);
+        // we can implement lookahead by using/processing an older sample while updating our gain state with the current sample
+        // thus, we'll effectively have our internal gain state being updated *ahead* of the samples we're processing
+        // this does introduce some latency, of course
+        let lookahead_s = params.lookahead.value();
+        // TODO:
+        // is there a better way than casting like this?
+        let lookahead_index = (sample_rate * lookahead_s) as i32;
+        let buffer_length = self.rms.buffer.len() as i32 - 1;
+        let buffer_index = (buffer_length - lookahead_index).max(0) as usize;
+        // if this is None, we have bigger problems
+        let target_sample = *self.rms.buffer.get(buffer_index).unwrap();
 
-        let mut target = *self
-            .rms
-            .buffer
-            .get(i)
-            .unwrap_or(self.rms.buffer.back().unwrap());
+        // now that we have the desired sample, we can process it
 
-        // modify with input gain
-        target *= input_gain;
         // save a dry copy
-        let pre_processed = target;
+        let pre_processed = target_sample;
         // save a wet copy
         let c = self.calculate_gain_reduction(threshold, ratio, knee_width);
-        let processed = target * c;
+        let processed = target_sample * c;
         // blend based on dry_wet
         let mut blended_output = (1.0 - dry_wet) * pre_processed + dry_wet * processed;
 
