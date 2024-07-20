@@ -63,7 +63,7 @@ const NUM_PARAMETERS: usize = 8;
 #[derive(Params)]
 pub struct CompressorParams {
     pub event_buffer: Arc<Mutex<Vec<Parameter>>>,
-    pub rms_update: Arc<AtomicBool>,
+
     /// The threshold at which to begin applying compression **in decibels.**
     /// For example, a compressor with a threshold of -10db would (for the most part) compress when *the level* above -10db.
     ///
@@ -107,6 +107,9 @@ pub struct CompressorParams {
 
     #[id = "lookahead"]
     pub lookahead: FloatParam,
+
+    #[id = "rmsmix"]
+    pub rms_mix: FloatParam,
 }
 
 impl CompressorParams {
@@ -152,13 +155,6 @@ fn generate_callback(
 impl Default for CompressorParams {
     fn default() -> Self {
         let event_buffer = Arc::new(Mutex::new(Vec::with_capacity(NUM_PARAMETERS)));
-
-        // TODO: there's gotta be a cleaner way to do this
-        let rms_update = Arc::new(AtomicBool::new(false));
-        let v = rms_update.clone();
-        let callback = Arc::new(move |_: f32| {
-            v.store(true, Ordering::Relaxed);
-        });
 
         // I mostly just played around with other compressors and got a feel for their paramters
         // I spent way too much time tuning these
@@ -293,7 +289,6 @@ impl Default for CompressorParams {
                     max: MAX_BUFFER_SIZE,
                 },
             )
-            .with_callback(callback)
             .with_value_to_string(v2s_buffer_size_formatter()),
 
             lookahead: FloatParam::new(
@@ -304,8 +299,8 @@ impl Default for CompressorParams {
                     max: MAX_BUFFER_SIZE,
                 },
             ),
+            rms_mix: FloatParam::new("RMS Mix", 0.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
 
-            rms_update,
             event_buffer,
         }
     }

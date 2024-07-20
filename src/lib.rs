@@ -8,10 +8,7 @@ use editor::create_editor;
 use nih_plug::prelude::*;
 use params::CompressorParams;
 
-use std::{
-    collections::VecDeque,
-    sync::{atomic::Ordering, Arc},
-};
+use std::{collections::VecDeque, sync::Arc};
 
 // general todo:
 // implement some sort of control for lookahead
@@ -27,7 +24,7 @@ pub struct CompressorPlugin {
     sample_rate: f32,
     params: Arc<CompressorParams>,
     compressors: [Compressor; 2],
-    shared_rms: Option<RmsLevelDetector>,
+    shared_rms: RmsLevelDetector,
 }
 
 impl Default for CompressorPlugin {
@@ -37,7 +34,7 @@ impl Default for CompressorPlugin {
             params: Arc::new(CompressorParams::default()),
             // TODO: FIX THIS LMAO
             compressors: [Compressor::new(), Compressor::new()],
-            shared_rms: Some(RmsLevelDetector::default()),
+            shared_rms: RmsLevelDetector::default(),
         }
     }
 }
@@ -84,11 +81,15 @@ impl Plugin for CompressorPlugin {
         // update sample rate :3
         let sample_rate = buffer_config.sample_rate;
         self.sample_rate = sample_rate;
+        let max_buffer_length = (sample_rate * MAX_BUFFER_SIZE) as usize;
+        let n = (sample_rate * self.params.buffer_size.value()) as usize;
+
+        self.shared_rms.buffer = VecDeque::with_capacity(max_buffer_length);
+        self.shared_rms.buffer.resize_with(n, || 0.0);
+
         for compressor in &mut self.compressors {
-            let max_buffer_length = (sample_rate * MAX_BUFFER_SIZE) as usize;
             compressor.rms.buffer = VecDeque::with_capacity(max_buffer_length);
 
-            let n = (sample_rate * self.params.buffer_size.value()) as usize;
             compressor.rms.buffer.resize_with(n, || 0.0);
         }
 
@@ -117,13 +118,14 @@ impl Plugin for CompressorPlugin {
         }
 
         // TODO:
-        // there seems to be a bug when setting the buffer size tro a large value and then turning it back down
-        if self.params.rms_update.swap(false, Ordering::Relaxed) {
-            println!("Changing buffer size...");
+        // i think this is bugged somewhere
 
-            let new_buffer_size = self.params.buffer_size.value();
+        let new_buffer_size = self.params.buffer_size.value();
+        let n = (self.sample_rate * new_buffer_size) as usize;
+        if self.shared_rms.buffer.len() != n {
+            // resize independent and shared RMS
+            self.shared_rms.buffer.resize_with(n, || 0.0);
             for compressor in &mut self.compressors {
-                let n = (self.sample_rate * new_buffer_size) as usize;
                 compressor.rms.buffer.resize_with(n, || 0.0);
             }
         }

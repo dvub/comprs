@@ -71,37 +71,37 @@ impl Compressor {
         &mut self,
         sample: &mut f32,
         params: &CompressorParams,
-        shared_rms: &mut Option<RmsLevelDetector>,
+        shared_rms: &mut RmsLevelDetector,
         sample_rate: f32,
     ) {
         // TODO:
         // this is so bad :sob:
         let input_gain = params.input_gain.smoothed.next();
         let output_gain = params.output_gain.smoothed.next();
-        let attack_coeff =
-            calculate_filter_coefficient(params.attack_time.smoothed.next(), sample_rate);
-        let release_coeff =
-            calculate_filter_coefficient(params.release_time.smoothed.next(), sample_rate);
+
         let dry_wet = params.dry_wet.smoothed.next();
         let threshold = params.threshold.smoothed.next();
         let ratio = params.ratio.smoothed.next();
         let knee_width = params.knee_width.smoothed.next();
 
+        let attack_coeff =
+            calculate_filter_coefficient(params.attack_time.smoothed.next(), sample_rate);
+        let release_coeff =
+            calculate_filter_coefficient(params.release_time.smoothed.next(), sample_rate);
+
+        let rms_mix = params.rms_mix.value();
+
+        self.update_gain(*sample, shared_rms, rms_mix, attack_coeff, release_coeff);
+
         let t = params.lookahead.value();
         let mut i = (sample_rate * t) as usize;
         i = i.saturating_sub(1);
 
-        self.update_gain(*sample, shared_rms, attack_coeff, release_coeff);
-
-        let mut target = if let Some(rms) = shared_rms {
-            *rms.buffer.get(i).unwrap_or(rms.buffer.back().unwrap())
-        } else {
-            *self
-                .rms
-                .buffer
-                .get(i)
-                .unwrap_or(self.rms.buffer.back().unwrap())
-        };
+        let mut target = *self
+            .rms
+            .buffer
+            .get(i)
+            .unwrap_or(self.rms.buffer.back().unwrap());
 
         // modify with input gain
         target *= input_gain;
@@ -123,16 +123,17 @@ impl Compressor {
     fn update_gain(
         &mut self,
         sample: f32,
-        shared_rms: &mut Option<RmsLevelDetector>,
+        shared_rms: &mut RmsLevelDetector,
+        rms_mix: f32,
         attack_coeff: f32,
         release_coeff: f32,
     ) {
         let avg_gain = self.average_gain;
-        let new_gain = if let Some(rms) = shared_rms {
-            rms.calculate_rms(sample)
-        } else {
-            self.rms.calculate_rms(sample)
-        };
+
+        let shared_gain = shared_rms.calculate_rms(sample);
+        let ind_gain = self.rms.calculate_rms(sample);
+
+        let new_gain = (1.0 - rms_mix) * ind_gain + rms_mix * shared_gain;
 
         // based on if our incoming signal is increasing or decreasing, choose the filter coefficent to use.
         let theta = if new_gain > avg_gain {
