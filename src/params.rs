@@ -37,6 +37,9 @@ pub enum Parameter {
     InputGain(f32),
     OutputGain(f32),
     DryWet(f32),
+    RmsBufferSize(f32),
+    Lookahead(f32),
+    RmsMix(f32),
 }
 
 #[derive(Deserialize, Serialize, TS)]
@@ -48,10 +51,9 @@ pub enum Messages {
 }
 
 // TODO:
-// implement something like
-// https://stackoverflow.com/questions/54177438/how-to-programmatically-get-the-number-of-fields-of-a-struct
+// dont use a const like this lol
 
-const NUM_PARAMETERS: usize = 8;
+const NUM_PARAMETERS: usize = 11;
 
 /// Parameters for compressor.
 /// **NOTE**: In this documentation I've used the term "level" instead of "signal."
@@ -100,12 +102,19 @@ pub struct CompressorParams {
     #[id = "drywet"]
     pub dry_wet: FloatParam,
 
+    /// The length of time (in seconds) of input that the RMS will use to calculate its gain.
+    /// For example, 30 milliseconds means that the RMS will capture the last 30 milliseconds of input as its gain.
     #[id = "bufsize"]
-    pub buffer_size: FloatParam,
+    pub rms_buffer_size: FloatParam,
 
+    /// The amount of time in seconds that the output is delayed.
+    /// I know there's a better definition, I just can't think of it lol
     #[id = "lookahead"]
     pub lookahead: FloatParam,
 
+    /// Blends the gain of the independent (L/R) and shared RMS.
+    /// A value of 0.0 means the L/R compressors calculate their compression *only* based on their own RMS state,
+    /// while a value of 1.0 means the L/R compressors will use the gain state of the RMS shared between them ONLY.
     #[id = "rmsmix"]
     pub rms_mix: FloatParam,
 }
@@ -122,6 +131,9 @@ impl CompressorParams {
             InputGain(value) => (&self.input_gain, *value),
             OutputGain(value) => (&self.output_gain, *value),
             DryWet(value) => (&self.dry_wet, *value),
+            RmsBufferSize(value) => (&self.rms_buffer_size, *value),
+            Lookahead(value) => (&self.lookahead, *value),
+            RmsMix(value) => (&self.rms_mix, *value),
         }
     }
 }
@@ -274,11 +286,12 @@ impl Default for CompressorParams {
             .with_string_to_value(formatters::s2v_f32_gain_to_db())
             .with_callback(generate_callback(OutputGain, &event_buffer)),
 
+            // DRY/WET
             dry_wet: FloatParam::new("Dry/Wet", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 }) // 1.0 default for full compressor effect
                 .with_smoother(SmoothingStyle::Linear(10.0))
                 .with_value_to_string(v2s_rounded_multiplied(1))
                 .with_callback(generate_callback(DryWet, &event_buffer)),
-            buffer_size: FloatParam::new(
+            rms_buffer_size: FloatParam::new(
                 "RMS Buffer Length",
                 DEFAULT_BUFFER_SIZE,
                 FloatRange::Linear {
@@ -286,8 +299,10 @@ impl Default for CompressorParams {
                     max: MAX_BUFFER_SIZE,
                 },
             )
-            .with_value_to_string(v2s_buffer_size_formatter()),
+            .with_value_to_string(v2s_buffer_size_formatter())
+            .with_smoother(SmoothingStyle::Linear(10.0)),
 
+            // LOOKEAHEAD
             lookahead: FloatParam::new(
                 "Lookahead",
                 0.0,
@@ -296,9 +311,13 @@ impl Default for CompressorParams {
                     max: MAX_BUFFER_SIZE,
                 },
             )
-            .with_value_to_string(v2s_buffer_size_formatter()),
+            .with_value_to_string(v2s_buffer_size_formatter())
+            .with_smoother(SmoothingStyle::Linear(10.0)),
+
+            // RMS MIX
             rms_mix: FloatParam::new("RMS Mix", 0.0, FloatRange::Linear { min: 0.0, max: 1.0 })
-                .with_value_to_string(v2s_rounded_multiplied(1)),
+                .with_value_to_string(v2s_rounded_multiplied(1))
+                .with_smoother(SmoothingStyle::Linear(10.0)),
 
             event_buffer,
         }

@@ -91,7 +91,7 @@ impl Plugin for CompressorPlugin {
         // NOTE:
         // i don't really have a good way of knowing if this code will actually work correctly
         let sample_rate = buffer_config.sample_rate;
-        let actual_size = (sample_rate * self.params.buffer_size.value()) as usize;
+        let actual_size = (sample_rate * self.params.rms_buffer_size.value()) as usize;
         self.initialize_rms_buffers(sample_rate);
         self.resize_rms_buffers(actual_size);
 
@@ -125,7 +125,7 @@ impl Plugin for CompressorPlugin {
 
         // also todo
         // this might not be optimal
-        let new_buffer_size = self.params.buffer_size.value();
+        let new_buffer_size = self.params.rms_buffer_size.smoothed.next();
         let new_size = (self.sample_rate * new_buffer_size) as usize;
         if self.shared_rms.buffer.len() != new_size {
             self.resize_rms_buffers(new_size);

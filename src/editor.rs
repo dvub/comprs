@@ -76,6 +76,9 @@ pub fn create_editor(params: Arc<CompressorParams>) -> WebViewEditor {
                                 InputGain(params.input_gain.value()),
                                 OutputGain(params.output_gain.value()),
                                 DryWet(params.dry_wet.value()),
+                                RmsBufferSize(params.rms_buffer_size.value()),
+                                Lookahead(params.lookahead.value()),
+                                RmsMix(params.lookahead.value()),
                             ];
 
                             for v in vec {

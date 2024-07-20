@@ -81,13 +81,13 @@ impl Compressor {
             calculate_filter_coefficient(params.release_time.smoothed.next(), sample_rate);
 
         // blends the shared/independent RMS
-        let rms_mix = params.rms_mix.value();
+        let rms_mix = params.rms_mix.smoothed.next();
         self.update_gain(*sample, shared_rms, rms_mix, attack_coeff, release_coeff);
 
         // we can implement lookahead by using/processing an older sample while updating our gain state with the current sample
         // thus, we'll effectively have our internal gain state being updated *ahead* of the samples we're processing
         // this does introduce some latency, of course
-        let lookahead_s = params.lookahead.value();
+        let lookahead_s = params.lookahead.smoothed.next();
         // TODO:
         // is there a better way than casting like this?
         let lookahead_index = (sample_rate * lookahead_s) as i32;
