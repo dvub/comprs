@@ -1,15 +1,9 @@
-use std::collections::VecDeque;
-
-// TODO:
-// consider using fast functions
 use nih_plug::util::{db_to_gain_fast, gain_to_db_fast};
+use std::collections::VecDeque;
 
 use crate::{params::CompressorParams, DEFAULT_BUFFER_SIZE};
 
 const DEFAULT_SAMPLE_RATE: f32 = 44_100.0;
-
-// TODO:
-// add documentation!!
 
 // https://www.musicdsp.org/en/latest/Effects/169-compressor.html (not the best source)
 // recommended:
@@ -31,7 +25,6 @@ impl Default for RmsLevelDetector {
 }
 impl RmsLevelDetector {
     pub fn calculate_rms(&mut self, input: f32) -> f32 {
-        // peak detection - RMS
         let old_sample = self.buffer.pop_front().unwrap();
         self.buffer.push_back(input);
         self.squared_sum += input.powi(2);
@@ -90,7 +83,6 @@ impl Compressor {
             calculate_filter_coefficient(params.release_time.smoothed.next(), sample_rate);
 
         let rms_mix = params.rms_mix.value();
-
         self.update_gain(*sample, shared_rms, rms_mix, attack_coeff, release_coeff);
 
         let t = params.lookahead.value();
@@ -182,8 +174,6 @@ impl Compressor {
         }
     }
 }
-// TODO:
-// tests for sanity check
 pub fn calculate_filter_coefficient(input: f32, sample_rate: f32) -> f32 {
     (-1.0 / (sample_rate * input)).exp()
 }
