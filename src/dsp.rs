@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 // TODO:
 // consider using fast functions
-use nih_plug::util::{db_to_gain, db_to_gain_fast, gain_to_db, gain_to_db_fast};
+use nih_plug::util::{db_to_gain_fast, gain_to_db_fast};
 
 use crate::{params::CompressorParams, DEFAULT_BUFFER_SIZE};
 
@@ -71,28 +71,38 @@ pub struct Compressor {
 
 impl Compressor {
     /// Processes a single input sample and returns the processed sample.
-    pub fn process(&mut self, sample: &mut f32, params: &CompressorParams) {
+    pub fn process(&mut self, sample: &mut f32, params: &CompressorParams, sample_rate: f32) {
         // TODO:
         // this is so bad :sob:
         let input_gain = params.input_gain.smoothed.next();
         let output_gain = params.output_gain.smoothed.next();
         let attack_coeff =
-            calculate_filter_coefficient(params.attack_time.smoothed.next(), 44_100.0);
+            calculate_filter_coefficient(params.attack_time.smoothed.next(), sample_rate);
         let release_coeff =
-            calculate_filter_coefficient(params.release_time.smoothed.next(), 44_100.0);
+            calculate_filter_coefficient(params.release_time.smoothed.next(), sample_rate);
         let dry_wet = params.dry_wet.smoothed.next();
         let threshold = params.threshold.smoothed.next();
         let ratio = params.ratio.smoothed.next();
         let knee_width = params.knee_width.smoothed.next();
 
-        // modify with input gain
-        *sample *= input_gain;
-        // save a dry copy
-        let pre_processed = *sample;
-        // save a wet copy
+        let t = params.lookahead.value();
+        let mut i = (sample_rate * t) as usize;
+        i = i.saturating_sub(1);
+
         self.update_gain(*sample, attack_coeff, release_coeff);
+
+        let mut target = *self
+            .rms
+            .buffer
+            .get(i)
+            .unwrap_or(self.rms.buffer.back().unwrap());
+        // modify with input gain
+        target *= input_gain;
+        // save a dry copy
+        let pre_processed = target;
+        // save a wet copy
         let c = self.calculate_gain_reduction(threshold, ratio, knee_width);
-        let processed = *sample * c;
+        let processed = target * c;
         // blend based on dry_wet
         let mut blended_output = (1.0 - dry_wet) * pre_processed + dry_wet * processed;
 

@@ -104,6 +104,9 @@ pub struct CompressorParams {
 
     #[id = "bufsize"]
     pub buffer_size: FloatParam,
+
+    #[id = "lookahead"]
+    pub lookahead: FloatParam,
 }
 
 impl CompressorParams {
@@ -155,6 +158,15 @@ impl Default for CompressorParams {
         let callback = Arc::new(move |_: f32| {
             v.store(true, Ordering::Relaxed);
         });
+
+        let buffer_size = FloatParam::new(
+            "RMS Buffer Size",
+            DEFAULT_BUFFER_SIZE,
+            FloatRange::Linear {
+                min: MIN_BUFFER_SIZE,
+                max: MAX_BUFFER_SIZE,
+            },
+        );
 
         // I mostly just played around with other compressors and got a feel for their paramters
         // I spent way too much time tuning these
@@ -291,6 +303,16 @@ impl Default for CompressorParams {
             )
             .with_callback(callback)
             .with_value_to_string(v2s_buffer_size_formatter()),
+
+            lookahead: FloatParam::new(
+                "Lookahead",
+                DEFAULT_BUFFER_SIZE,
+                FloatRange::Linear {
+                    min: 0.0,
+                    max: MAX_BUFFER_SIZE,
+                },
+            ),
+
             rms_update,
             event_buffer,
         }

@@ -104,7 +104,7 @@ impl Plugin for CompressorPlugin {
         for mut channel_samples in buffer.iter_samples() {
             for i in 0..num_channels {
                 let sample = channel_samples.get_mut(i).unwrap();
-                self.compressors[i].process(sample, &self.params);
+                self.compressors[i].process(sample, &self.params, self.sample_rate);
             }
         }
 
