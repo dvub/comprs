@@ -6,6 +6,7 @@ import { RatioKnob } from "@/components/knobs/RatioKnob";
 import { ThresholdKnob } from "@/components/knobs/ThresholdKnob";
 import { NormalisableRange } from "@/lib/utils";
 import React, { useEffect, useLayoutEffect } from "react";
+
 import { KneeKnob } from "@/components/knobs/KneeKnob";
 import { DBKnob } from "@/components/knobs/generic/DBKnob";
 import { Parameter } from "@/bindings/Parameter";
