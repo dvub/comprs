@@ -55,6 +55,7 @@ pub enum LevelDetectionType {
     Rms,
 }
 */
+
 /// Struct to represent a dynamic range compressor. See documentation for each field to learn more.
 pub struct Compressor {
     /// Average input gain *in linear space*.
@@ -62,16 +63,17 @@ pub struct Compressor {
     average_gain: f32,
     /// RMS state.
     pub rms: RmsLevelDetector,
-    // The type of level detection used to update the internal average gain of the compressor.
-    // It is generally suitable and computationally cheaper to use the `Simple` variant, which directly takes into account the input and smooths it.
-    // On the other hand, the `Rms` variant computes, well, the RMS of the input, and uses that to keep track of the input signal.
-    // For more information, do some research.
-    // level_detection_type: LevelDetectionType,
 }
 
 impl Compressor {
     /// Processes a single input sample and returns the processed sample.
-    pub fn process(&mut self, sample: &mut f32, params: &CompressorParams, sample_rate: f32) {
+    pub fn process(
+        &mut self,
+        sample: &mut f32,
+        params: &CompressorParams,
+        shared_rms: &mut Option<RmsLevelDetector>,
+        sample_rate: f32,
+    ) {
         // TODO:
         // this is so bad :sob:
         let input_gain = params.input_gain.smoothed.next();
@@ -89,13 +91,18 @@ impl Compressor {
         let mut i = (sample_rate * t) as usize;
         i = i.saturating_sub(1);
 
-        self.update_gain(*sample, attack_coeff, release_coeff);
+        self.update_gain(*sample, shared_rms, attack_coeff, release_coeff);
 
-        let mut target = *self
-            .rms
-            .buffer
-            .get(i)
-            .unwrap_or(self.rms.buffer.back().unwrap());
+        let mut target = if let Some(rms) = shared_rms {
+            *rms.buffer.get(i).unwrap_or(rms.buffer.back().unwrap())
+        } else {
+            *self
+                .rms
+                .buffer
+                .get(i)
+                .unwrap_or(self.rms.buffer.back().unwrap())
+        };
+
         // modify with input gain
         target *= input_gain;
         // save a dry copy
@@ -113,10 +120,20 @@ impl Compressor {
     }
 
     /// Updates the internal gain of the compressor given an input sample.
-    fn update_gain(&mut self, sample: f32, attack_coeff: f32, release_coeff: f32) {
+    fn update_gain(
+        &mut self,
+        sample: f32,
+        shared_rms: &mut Option<RmsLevelDetector>,
+        attack_coeff: f32,
+        release_coeff: f32,
+    ) {
         let avg_gain = self.average_gain;
-        // choose the input based on the desired level detection method
-        let new_gain = self.rms.calculate_rms(sample);
+        let new_gain = if let Some(rms) = shared_rms {
+            rms.calculate_rms(sample)
+        } else {
+            self.rms.calculate_rms(sample)
+        };
+
         // based on if our incoming signal is increasing or decreasing, choose the filter coefficent to use.
         let theta = if new_gain > avg_gain {
             attack_coeff

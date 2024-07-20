@@ -3,7 +3,7 @@ pub mod editor;
 
 mod params;
 
-use dsp::Compressor;
+use dsp::{Compressor, RmsLevelDetector};
 use editor::create_editor;
 use nih_plug::prelude::*;
 use params::CompressorParams;
@@ -21,20 +21,23 @@ use std::{
 pub const MAX_BUFFER_SIZE: f32 = 0.03;
 pub const DEFAULT_BUFFER_SIZE: f32 = 0.01;
 pub const MIN_BUFFER_SIZE: f32 = 0.001;
+pub const DEFAULT_SAMPLE_RATE: f32 = 44_100.0;
 
 pub struct CompressorPlugin {
     sample_rate: f32,
     params: Arc<CompressorParams>,
     compressors: [Compressor; 2],
+    shared_rms: Option<RmsLevelDetector>,
 }
 
 impl Default for CompressorPlugin {
     fn default() -> Self {
         Self {
-            sample_rate: 44_100.0,
+            sample_rate: DEFAULT_SAMPLE_RATE,
             params: Arc::new(CompressorParams::default()),
             // TODO: FIX THIS LMAO
             compressors: [Compressor::new(), Compressor::new()],
+            shared_rms: Some(RmsLevelDetector::default()),
         }
     }
 }
@@ -85,7 +88,7 @@ impl Plugin for CompressorPlugin {
             let max_buffer_length = (sample_rate * MAX_BUFFER_SIZE) as usize;
             compressor.rms.buffer = VecDeque::with_capacity(max_buffer_length);
 
-            let n = (sample_rate * DEFAULT_BUFFER_SIZE) as usize;
+            let n = (sample_rate * self.params.buffer_size.value()) as usize;
             compressor.rms.buffer.resize_with(n, || 0.0);
         }
 
@@ -104,7 +107,12 @@ impl Plugin for CompressorPlugin {
         for mut channel_samples in buffer.iter_samples() {
             for i in 0..num_channels {
                 let sample = channel_samples.get_mut(i).unwrap();
-                self.compressors[i].process(sample, &self.params, self.sample_rate);
+                self.compressors[i].process(
+                    sample,
+                    &self.params,
+                    &mut self.shared_rms,
+                    self.sample_rate,
+                );
             }
         }
 

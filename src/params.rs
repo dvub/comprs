@@ -152,21 +152,13 @@ fn generate_callback(
 impl Default for CompressorParams {
     fn default() -> Self {
         let event_buffer = Arc::new(Mutex::new(Vec::with_capacity(NUM_PARAMETERS)));
-        let rms_update = Arc::new(AtomicBool::new(false));
 
+        // TODO: there's gotta be a cleaner way to do this
+        let rms_update = Arc::new(AtomicBool::new(false));
         let v = rms_update.clone();
         let callback = Arc::new(move |_: f32| {
             v.store(true, Ordering::Relaxed);
         });
-
-        let buffer_size = FloatParam::new(
-            "RMS Buffer Size",
-            DEFAULT_BUFFER_SIZE,
-            FloatRange::Linear {
-                min: MIN_BUFFER_SIZE,
-                max: MAX_BUFFER_SIZE,
-            },
-        );
 
         // I mostly just played around with other compressors and got a feel for their paramters
         // I spent way too much time tuning these
