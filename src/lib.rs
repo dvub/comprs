@@ -32,6 +32,26 @@ impl Default for CompressorPlugin {
     }
 }
 
+impl CompressorPlugin {
+    fn initialize_rms_buffers(&mut self, sample_rate: f32) {
+        self.sample_rate = sample_rate;
+        let max_buffer_length = (sample_rate * MAX_BUFFER_SIZE) as usize;
+
+        self.shared_rms.buffer = VecDeque::with_capacity(max_buffer_length);
+
+        for compressor in &mut self.compressors {
+            compressor.rms.buffer = VecDeque::with_capacity(max_buffer_length);
+        }
+    }
+    fn resize_rms_buffers(&mut self, new_size: usize) {
+        // resize independent and shared RMS
+        self.shared_rms.buffer.resize_with(new_size, || 0.0);
+        for compressor in &mut self.compressors {
+            compressor.rms.buffer.resize_with(new_size, || 0.0);
+        }
+    }
+}
+
 impl Plugin for CompressorPlugin {
     const NAME: &'static str = "COMPRS";
     const VENDOR: &'static str = "DVUB";
@@ -70,21 +90,10 @@ impl Plugin for CompressorPlugin {
     ) -> bool {
         // NOTE:
         // i don't really have a good way of knowing if this code will actually work correctly
-
-        // update sample rate :3
         let sample_rate = buffer_config.sample_rate;
-        self.sample_rate = sample_rate;
-        let max_buffer_length = (sample_rate * MAX_BUFFER_SIZE) as usize;
-        let n = (sample_rate * self.params.buffer_size.value()) as usize;
-
-        self.shared_rms.buffer = VecDeque::with_capacity(max_buffer_length);
-        self.shared_rms.buffer.resize_with(n, || 0.0);
-
-        for compressor in &mut self.compressors {
-            compressor.rms.buffer = VecDeque::with_capacity(max_buffer_length);
-
-            compressor.rms.buffer.resize_with(n, || 0.0);
-        }
+        let actual_size = (sample_rate * self.params.buffer_size.value()) as usize;
+        self.initialize_rms_buffers(sample_rate);
+        self.resize_rms_buffers(actual_size);
 
         true
     }
@@ -95,10 +104,11 @@ impl Plugin for CompressorPlugin {
         _aux: &mut AuxiliaryBuffers,
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        // apply compression
         let num_channels = buffer.channels();
 
+        // this loops however many samples are in the buffer, so maybe 44100/256 or something
         for mut channel_samples in buffer.iter_samples() {
+            // this loops twice, once for L/R channels
             for i in 0..num_channels {
                 let sample = channel_samples.get_mut(i).unwrap();
                 self.compressors[i].process(
@@ -113,14 +123,12 @@ impl Plugin for CompressorPlugin {
         // TODO:
         // i think this is bugged somewhere
 
+        // also todo
+        // this might not be optimal
         let new_buffer_size = self.params.buffer_size.value();
-        let n = (self.sample_rate * new_buffer_size) as usize;
-        if self.shared_rms.buffer.len() != n {
-            // resize independent and shared RMS
-            self.shared_rms.buffer.resize_with(n, || 0.0);
-            for compressor in &mut self.compressors {
-                compressor.rms.buffer.resize_with(n, || 0.0);
-            }
+        let new_size = (self.sample_rate * new_buffer_size) as usize;
+        if self.shared_rms.buffer.len() != new_size {
+            self.resize_rms_buffers(new_size);
         }
 
         ProcessStatus::Normal
