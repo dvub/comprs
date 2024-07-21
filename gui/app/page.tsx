@@ -45,7 +45,8 @@ export default function Home() {
           <RatioKnob />
         </div>
         {/* this div contains output-related knobs */}
-        <div>
+        <div className="text-center">
+          <p>OUT CTRL</p>
           <PercentKnob
             label="DRYWET"
             size={96}
@@ -83,35 +84,39 @@ export default function Home() {
             range={new NormalisableRange(0, 5, 0.5)}
             parameter="ReleaseTime"
           />
+
           <KneeKnob />
           {/* RMS CONTROLS */}
-          <div className="flex gap-2">
-            <PercentKnob
-              label="RMS%"
-              minValue={0}
-              maxValue={1}
-              defaultValue={0}
-              range={new NormalisableRange(0, 1, 0.5)}
-              parameter="RmsMix"
-              size={64}
-            />
-            <TimeKnob
-              label="RMSLEN"
-              minValue={0.001}
-              maxValue={0.03}
-              defaultValue={0.01}
-              range={new NormalisableRange(0.001, 0.03, 0.015)}
-              parameter="RmsBufferSize"
-            />
-            {/*  TODO: dynamically set min/max on this */}
-            <TimeKnob
-              label="LKAHD"
-              minValue={0}
-              maxValue={0.03}
-              defaultValue={0}
-              range={new NormalisableRange(0, 0.03, 0.015)}
-              parameter="Lookahead"
-            />
+          <div className="text-center">
+            <p>RMS CTRL</p>
+            <div className="flex gap-3">
+              <PercentKnob
+                label="RMS%"
+                minValue={0}
+                maxValue={1}
+                defaultValue={0}
+                range={new NormalisableRange(0, 1, 0.5)}
+                parameter="RmsMix"
+                size={96}
+              />
+              <TimeKnob
+                label="RMSLEN"
+                minValue={0.001}
+                maxValue={0.03}
+                defaultValue={0.01}
+                range={new NormalisableRange(0.001, 0.03, 0.015)}
+                parameter="RmsBufferSize"
+              />
+              {/*  TODO: dynamically set min/max on this */}
+              <TimeKnob
+                label="LKAHD"
+                minValue={0}
+                maxValue={0.03}
+                defaultValue={0}
+                range={new NormalisableRange(0, 0.03, 0.015)}
+                parameter="Lookahead"
+              />
+            </div>
           </div>
         </div>
       </div>

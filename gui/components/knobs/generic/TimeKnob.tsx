@@ -24,7 +24,7 @@ export function TimeKnob(props: {
       multiplier = 1000;
       unit = " ms";
     }
-    return `${Number((valueRaw * multiplier).toFixed(3))}${unit}`;
+    return `${Number((valueRaw * multiplier).toFixed(2))}${unit}`;
   };
   return (
     <KnobBase

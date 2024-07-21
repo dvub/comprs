@@ -8,7 +8,10 @@ use nih_plug::{
 use serde::{Deserialize, Serialize};
 use std::{
     mem::discriminant,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
 };
 use ts_rs::TS;
 
@@ -63,7 +66,7 @@ const NUM_PARAMETERS: usize = 11;
 #[derive(Params)]
 pub struct CompressorParams {
     pub event_buffer: Arc<Mutex<Vec<Parameter>>>,
-
+    pub rms_update: Arc<AtomicBool>,
     /// The threshold at which to begin applying compression **in decibels.**
     /// For example, a compressor with a threshold of -10db would (for the most part) compress when *the level* above -10db.
     ///
@@ -165,7 +168,11 @@ fn generate_callback(
 impl Default for CompressorParams {
     fn default() -> Self {
         let event_buffer = Arc::new(Mutex::new(Vec::with_capacity(NUM_PARAMETERS)));
-
+        let rms_update = Arc::new(AtomicBool::new(false));
+        let rms_update_clone = rms_update.clone();
+        let rms_callback = Arc::new(move |value: f32| {
+            rms_update_clone.store(true, Ordering::Relaxed);
+        });
         // I mostly just played around with other compressors and got a feel for their paramters
         // I spent way too much time tuning these
         Self {
@@ -302,7 +309,8 @@ impl Default for CompressorParams {
             )
             .with_value_to_string(v2s_buffer_size_formatter())
             .with_smoother(SmoothingStyle::Linear(10.0))
-            .with_callback(generate_callback(RmsBufferSize, &event_buffer)),
+            .with_callback(generate_callback(RmsBufferSize, &event_buffer))
+            .with_callback(rms_callback),
 
             // LOOKEAHEAD
             lookahead: FloatParam::new(
@@ -323,6 +331,7 @@ impl Default for CompressorParams {
                 .with_smoother(SmoothingStyle::Linear(10.0))
                 .with_callback(generate_callback(RmsMix, &event_buffer)),
 
+            rms_update,
             event_buffer,
         }
     }

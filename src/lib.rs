@@ -11,7 +11,10 @@ use editor::create_editor;
 use nih_plug::prelude::*;
 use params::CompressorParams;
 
-use std::{collections::VecDeque, sync::Arc};
+use std::{
+    collections::VecDeque,
+    sync::{atomic::Ordering, Arc},
+};
 
 pub const MAX_BUFFER_SIZE: f32 = 0.03;
 
@@ -123,11 +126,10 @@ impl Plugin for CompressorPlugin {
             }
         }
 
-        // also todo
-        // this might not be optimal
-        let new_buffer_size = self.params.rms_buffer_size.smoothed.next();
-        let new_size = (self.sample_rate * new_buffer_size) as usize;
-        if self.shared_rms.buffer.len() != new_size {
+        if self.params.rms_update.swap(false, Ordering::Relaxed) {
+            let new_buffer_size = self.params.rms_buffer_size.smoothed.next();
+            let new_size = (self.sample_rate * new_buffer_size) as usize;
+
             context.set_latency_samples(new_size as u32);
             self.resize_rms_buffers(new_size);
         }
