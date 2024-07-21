@@ -2,7 +2,7 @@
 // it should be clear i'm a typescript noob
 
 import { Parameter } from "@/bindings/Parameter";
-import { Messages } from "@/bindings/Messages";
+import { Message } from "@/bindings/Messages";
 
 // super weird, but i guess it works
 // https://stackoverflow.com/questions/49401866/all-possible-keys-of-an-union-type
@@ -18,13 +18,13 @@ export type ParameterType = KeysOfUnion<Parameter>;
 declare global {
   interface Window {
     ipc: { postMessage: (message: string) => void };
-    onPluginMessage: (message: Parameter) => void;
+    onPluginMessage: (message: Message) => void;
   }
 }
 /*
 window.ipc = window.ipc || {};
 window.onPluginMessage = window.onPluginMessage || {};
 */
-export function sendToPlugin(msg: Messages) {
+export function sendToPlugin(msg: Message) {
   window.ipc.postMessage(JSON.stringify(msg));
 }

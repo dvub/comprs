@@ -1,4 +1,4 @@
-use std::{mem::discriminant, sync::Arc};
+use std::{mem::discriminant, sync::atomic::Ordering};
 
 use nih_plug::nih_log;
 use nih_plug_webview::{
@@ -6,13 +6,20 @@ use nih_plug_webview::{
 };
 use serde_json::json;
 
-use crate::params::{
-    CompressorParams, Messages,
-    Parameter::{self, *},
+use crate::{
+    params::{
+        Amplitude, Message,
+        Parameter::{self, *},
+    },
+    CompressorPlugin,
 };
 
-pub fn create_editor(params: Arc<CompressorParams>) -> WebViewEditor {
+pub fn create_editor(plugin: &CompressorPlugin) -> WebViewEditor {
+    let params = plugin.params.clone();
     let event_buffer = params.event_buffer.clone();
+
+    let pre_amplitude = plugin.pre_amplitude.clone();
+    let post_amplitude = plugin.post_amplitude.clone();
 
     let size = (750, 500);
 
@@ -61,9 +68,9 @@ pub fn create_editor(params: Arc<CompressorParams>) -> WebViewEditor {
 
             // 1. receive parameter updates (and any other events) from GUI
             while let Ok(value) = ctx.next_event() {
-                if let Ok(action) = serde_json::from_value::<Messages>(value) {
+                if let Ok(action) = serde_json::from_value::<Message>(value) {
                     match action {
-                        Messages::Init => {
+                        Message::Init => {
                             nih_log!("GUI Opened, sending initial data..");
                             // TODO:
                             // is there a nicer way ot do this?
@@ -85,7 +92,7 @@ pub fn create_editor(params: Arc<CompressorParams>) -> WebViewEditor {
                                 event_buffer_lock.push(v);
                             }
                         }
-                        Messages::ParameterUpdate(event) => {
+                        Message::ParameterUpdate(event) => {
                             let (param, value) = params.get_param(&event);
                             println!("{}, {}", param, value);
                             // todo(?)
@@ -97,6 +104,8 @@ pub fn create_editor(params: Arc<CompressorParams>) -> WebViewEditor {
                             setter.set_parameter(param, value);
                             setter.end_set_parameter(param);
                         }
+                        Message::Amplitude(_) => todo!(),
+                        Message::WindowClosed => println!("Window closed"),
                     }
                 } else {
                     println!("Error receiving message from GUI");
@@ -117,6 +126,12 @@ pub fn create_editor(params: Arc<CompressorParams>) -> WebViewEditor {
                 ctx.send_json(json!(event))
                     .expect("Error sending data to frontend");
             }
+
+            let pre = pre_amplitude.load(Ordering::Relaxed);
+            let post = post_amplitude.load(Ordering::Relaxed);
+            let message = Amplitude::new(pre, post);
+            ctx.send_json(json!(message)).expect("OH NO!");
+
             // once we've sent our pending updates to the GUI, we can clear our event buffer;
             event_buffer_lock.clear();
         });

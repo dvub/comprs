@@ -5,18 +5,19 @@ import { TimeKnob } from "@/components/knobs/generic/TimeKnob";
 import { RatioKnob } from "@/components/knobs/RatioKnob";
 import { ThresholdKnob } from "@/components/knobs/ThresholdKnob";
 import { NormalisableRange } from "@/lib/utils";
-import React, { useEffect, useLayoutEffect } from "react";
+import React, { useEffect } from "react";
 
 import { KneeKnob } from "@/components/knobs/KneeKnob";
 import { DBKnob } from "@/components/knobs/generic/DBKnob";
-import { Parameter } from "@/bindings/Parameter";
 import { sendToPlugin } from "@/lib";
 import { PercentKnob } from "@/components/knobs/generic/PercentKnob";
+import { Message } from "@/bindings/Messages";
+import { Amplitude } from "@/components/Amplitude";
 
 export default function Home() {
   useEffect(() => {
-    window.onPluginMessage = (message: Parameter) => {
-      let event = new CustomEvent("pluginMessage", { detail: message });
+    window.onPluginMessage = (message: Message) => {
+      const event = new CustomEvent("pluginMessage", { detail: message });
       window.dispatchEvent(event);
     };
 
@@ -41,7 +42,7 @@ export default function Home() {
         {/* middle section, contains [IMO] the most important parameters */}
         <div className="flex gap-3 justify-center">
           <ThresholdKnob />
-          <div className="w-36 h-36 bg-slate-200"></div>
+          <Amplitude />
           <RatioKnob />
         </div>
         {/* this div contains output-related knobs */}

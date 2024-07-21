@@ -48,9 +48,26 @@ pub enum Parameter {
 #[derive(Deserialize, Serialize, TS)]
 #[ts(export_to = "../gui/bindings/Messages.ts")]
 #[ts(export)]
-pub enum Messages {
+pub enum Message {
     Init,
+    WindowClosed,
     ParameterUpdate(Parameter),
+    Amplitude(Amplitude),
+}
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export_to = "../gui/bindings/Amplitude.ts")]
+#[ts(export)]
+pub struct Amplitude {
+    pre_amplitude: f32,
+    post_amplitude: f32,
+}
+impl Amplitude {
+    pub fn new(pre: f32, post: f32) -> Self {
+        Amplitude {
+            pre_amplitude: pre,
+            post_amplitude: post,
+        }
+    }
 }
 
 // TODO:
@@ -168,11 +185,15 @@ fn generate_callback(
 impl Default for CompressorParams {
     fn default() -> Self {
         let event_buffer = Arc::new(Mutex::new(Vec::with_capacity(NUM_PARAMETERS)));
+
         let rms_update = Arc::new(AtomicBool::new(false));
+
+        //
         let rms_update_clone = rms_update.clone();
-        let rms_callback = Arc::new(move |value: f32| {
+        let rms_callback = Arc::new(move |_: f32| {
             rms_update_clone.store(true, Ordering::Relaxed);
         });
+
         // I mostly just played around with other compressors and got a feel for their paramters
         // I spent way too much time tuning these
         Self {

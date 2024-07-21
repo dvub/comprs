@@ -3,9 +3,6 @@ pub mod editor;
 
 mod params;
 
-// TODO:
-//there's currently a bug where setting the buffer size from the GUI causes, well, basically everything to freeze
-
 use dsp::{Compressor, RmsLevelDetector};
 use editor::create_editor;
 use nih_plug::prelude::*;
@@ -23,6 +20,8 @@ pub struct CompressorPlugin {
     params: Arc<CompressorParams>,
     compressors: [Compressor; 2],
     shared_rms: RmsLevelDetector,
+    pre_amplitude: Arc<AtomicF32>,
+    post_amplitude: Arc<AtomicF32>,
 }
 
 impl Default for CompressorPlugin {
@@ -34,6 +33,8 @@ impl Default for CompressorPlugin {
             // TODO: FIX THIS LMAO
             compressors: [Compressor::new(), Compressor::new()],
             shared_rms: RmsLevelDetector::default(),
+            pre_amplitude: Arc::new(AtomicF32::new(0.0)),
+            post_amplitude: Arc::new(AtomicF32::new(0.0)),
         }
     }
 }
@@ -112,18 +113,28 @@ impl Plugin for CompressorPlugin {
     ) -> ProcessStatus {
         let num_channels = buffer.channels();
 
-        // this loops however many samples are in the buffer, so maybe 44100/256 or something
         for mut channel_samples in buffer.iter_samples() {
+            let mut pre_amplitude = 0.0;
+            let mut post_amplitude = 0.0;
+            let num_samples = channel_samples.len();
+
             // this loops twice, once for L/R channels
             for i in 0..num_channels {
                 let sample = channel_samples.get_mut(i).unwrap();
+                pre_amplitude += *sample;
                 self.compressors[i].process(
                     sample,
                     &self.params,
                     &mut self.shared_rms,
                     self.sample_rate,
                 );
+                post_amplitude += *sample;
             }
+            pre_amplitude = (pre_amplitude / num_samples as f32).abs();
+            post_amplitude = (post_amplitude / num_channels as f32).abs();
+
+            self.pre_amplitude.store(pre_amplitude, Ordering::Relaxed);
+            self.post_amplitude.store(post_amplitude, Ordering::Relaxed);
         }
 
         if self.params.rms_update.swap(false, Ordering::Relaxed) {
@@ -138,7 +149,7 @@ impl Plugin for CompressorPlugin {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        let editor = create_editor(self.params.clone());
+        let editor = create_editor(self);
         Some(Box::new(editor))
     }
 }
