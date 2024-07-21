@@ -3,6 +3,9 @@ pub mod editor;
 
 mod params;
 
+// TODO:
+//there's currently a bug where setting the buffer size from the GUI causes, well, basically everything to freeze
+
 use dsp::{Compressor, RmsLevelDetector};
 use editor::create_editor;
 use nih_plug::prelude::*;
@@ -102,7 +105,7 @@ impl Plugin for CompressorPlugin {
         &mut self,
         buffer: &mut Buffer,
         _aux: &mut AuxiliaryBuffers,
-        _context: &mut impl ProcessContext<Self>,
+        context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
         let num_channels = buffer.channels();
 
@@ -120,14 +123,12 @@ impl Plugin for CompressorPlugin {
             }
         }
 
-        // TODO:
-        // i think this is bugged somewhere
-
         // also todo
         // this might not be optimal
         let new_buffer_size = self.params.rms_buffer_size.smoothed.next();
         let new_size = (self.sample_rate * new_buffer_size) as usize;
         if self.shared_rms.buffer.len() != new_size {
+            context.set_latency_samples(new_size as u32);
             self.resize_rms_buffers(new_size);
         }
 

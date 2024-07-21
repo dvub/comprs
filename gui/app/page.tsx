@@ -85,7 +85,7 @@ export default function Home() {
           />
           <KneeKnob />
           {/* RMS CONTROLS */}
-          <div className="">
+          <div className="flex gap-2">
             <PercentKnob
               label="RMS%"
               minValue={0}
@@ -94,6 +94,23 @@ export default function Home() {
               range={new NormalisableRange(0, 1, 0.5)}
               parameter="RmsMix"
               size={64}
+            />
+            <TimeKnob
+              label="RMSLEN"
+              minValue={0.001}
+              maxValue={0.03}
+              defaultValue={0.01}
+              range={new NormalisableRange(0.001, 0.03, 0.015)}
+              parameter="RmsBufferSize"
+            />
+            {/*  TODO: dynamically set min/max on this */}
+            <TimeKnob
+              label="LKAHD"
+              minValue={0}
+              maxValue={0.03}
+              defaultValue={0}
+              range={new NormalisableRange(0, 0.03, 0.015)}
+              parameter="Lookahead"
             />
           </div>
         </div>

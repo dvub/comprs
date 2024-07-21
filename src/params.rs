@@ -291,6 +291,7 @@ impl Default for CompressorParams {
                 .with_smoother(SmoothingStyle::Linear(10.0))
                 .with_value_to_string(v2s_rounded_multiplied(1))
                 .with_callback(generate_callback(DryWet, &event_buffer)),
+            // RMS BUFFER SIZE
             rms_buffer_size: FloatParam::new(
                 "RMS Size",
                 DEFAULT_BUFFER_SIZE,
