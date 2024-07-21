@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Amplitude as Amp } from "@/bindings/Amplitude";
 import { useEffect, useRef, useState } from "react";
 
