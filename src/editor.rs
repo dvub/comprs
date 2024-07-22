@@ -104,8 +104,9 @@ pub fn create_editor(plugin: &CompressorPlugin) -> WebViewEditor {
                             setter.set_parameter(param, value);
                             setter.end_set_parameter(param);
                         }
-                        Message::Amplitude(_) => todo!(),
                         Message::WindowClosed => println!("Window closed"),
+                        // we should not ever receive these from the frontend. they are backend only
+                        Message::Amplitude(_) => todo!(),
                     }
                 } else {
                     println!("Error receiving message from GUI");

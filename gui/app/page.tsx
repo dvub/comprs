@@ -5,7 +5,7 @@ import { TimeKnob } from "@/components/knobs/generic/TimeKnob";
 import { RatioKnob } from "@/components/knobs/RatioKnob";
 import { ThresholdKnob } from "@/components/knobs/ThresholdKnob";
 import { NormalisableRange } from "@/lib/utils";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 import { KneeKnob } from "@/components/knobs/KneeKnob";
 import { DBKnob } from "@/components/knobs/generic/DBKnob";

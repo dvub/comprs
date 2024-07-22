@@ -54,6 +54,8 @@ pub enum Message {
     ParameterUpdate(Parameter),
     Amplitude(Amplitude),
 }
+// TODO:
+// make sure generated TS types arent snake_case
 #[derive(Deserialize, Serialize, TS)]
 #[ts(export_to = "../gui/bindings/Amplitude.ts")]
 #[ts(export)]

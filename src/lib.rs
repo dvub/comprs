@@ -14,8 +14,6 @@ use std::{
 };
 
 pub const MAX_BUFFER_SIZE: f32 = 0.03;
-/// The time it takes for the peak meter to decay by 12 dB after switching to complete silence.
-const PEAK_METER_DECAY_MS: f64 = 100.0;
 
 pub struct CompressorPlugin {
     sample_rate: f32,
@@ -24,7 +22,6 @@ pub struct CompressorPlugin {
     shared_rms: RmsLevelDetector,
     pre_amplitude: Arc<AtomicF32>,
     post_amplitude: Arc<AtomicF32>,
-    peak_meter_decay_weight: f32,
 }
 
 impl Default for CompressorPlugin {
@@ -38,15 +35,13 @@ impl Default for CompressorPlugin {
             shared_rms: RmsLevelDetector::default(),
             pre_amplitude: Arc::new(AtomicF32::new(0.0)),
             post_amplitude: Arc::new(AtomicF32::new(0.0)),
-            peak_meter_decay_weight: 1.0,
         }
     }
 }
 
 impl CompressorPlugin {
-    fn initialize_rms_buffers(&mut self, sample_rate: f32) {
-        self.sample_rate = sample_rate;
-        let max_buffer_length = (sample_rate * MAX_BUFFER_SIZE) as usize;
+    fn initialize_rms_buffers(&mut self) {
+        let max_buffer_length = (self.sample_rate * MAX_BUFFER_SIZE) as usize;
 
         self.shared_rms.buffer = VecDeque::with_capacity(max_buffer_length);
 
@@ -59,14 +54,6 @@ impl CompressorPlugin {
         self.shared_rms.buffer.resize_with(new_size, || 0.0);
         for compressor in &mut self.compressors {
             compressor.rms.buffer.resize_with(new_size, || 0.0);
-        }
-    }
-    fn calculate_amplitude(&self, current_amplitude: f32, new_amplitude: f32) -> f32 {
-        if new_amplitude > current_amplitude {
-            new_amplitude
-        } else {
-            current_amplitude * self.peak_meter_decay_weight
-                + new_amplitude * (1.0 - self.peak_meter_decay_weight)
         }
     }
 }
@@ -107,17 +94,13 @@ impl Plugin for CompressorPlugin {
         buffer_config: &BufferConfig,
         _context: &mut impl InitContext<Self>,
     ) -> bool {
-        // After `PEAK_METER_DECAY_MS` milliseconds of pure silence, the peak meter's value should
-        // have dropped by 12 dB
-        self.peak_meter_decay_weight = 0.25f64
-            .powf((buffer_config.sample_rate as f64 * PEAK_METER_DECAY_MS / 1000.0).recip())
-            as f32;
-
         // NOTE:
         // i don't really have a good way of knowing if this code will actually work correctly
+
         let sample_rate = buffer_config.sample_rate;
+        self.sample_rate = sample_rate;
         let actual_size = (sample_rate * self.params.rms_buffer_size.value()) as usize;
-        self.initialize_rms_buffers(sample_rate);
+        self.initialize_rms_buffers();
         self.resize_rms_buffers(actual_size);
 
         true
@@ -151,22 +134,8 @@ impl Plugin for CompressorPlugin {
             pre_amplitude = (pre_amplitude / num_samples as f32).abs();
             post_amplitude = (post_amplitude / num_channels as f32).abs();
 
-            let current_pre_amplitude = self
-                .pre_amplitude
-                .load(std::sync::atomic::Ordering::Relaxed);
-
-            let current_post_amplitude = self
-                .post_amplitude
-                .load(std::sync::atomic::Ordering::Relaxed);
-
-            self.pre_amplitude.store(
-                self.calculate_amplitude(current_pre_amplitude, pre_amplitude),
-                Ordering::Relaxed,
-            );
-            self.post_amplitude.store(
-                self.calculate_amplitude(current_post_amplitude, post_amplitude),
-                Ordering::Relaxed,
-            );
+            self.pre_amplitude.store(pre_amplitude, Ordering::Relaxed);
+            self.post_amplitude.store(post_amplitude, Ordering::Relaxed);
         }
 
         if self.params.rms_update.swap(false, Ordering::Relaxed) {
@@ -182,6 +151,7 @@ impl Plugin for CompressorPlugin {
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let editor = create_editor(self);
+
         Some(Box::new(editor))
     }
 }

@@ -3,33 +3,80 @@ import { Amplitude as Amp } from "@/bindings/Amplitude";
 import { useEffect, useRef, useState } from "react";
 import { clearInterval } from "timers";
 
+// TODO:
+// documentation/comments
+// remove the TS-NOCHECK!
 export function Amplitude() {
+  const meterWidth = 144;
+  const meterHeight = 144;
+  const bufferSize = 750; // Number of data points to keep in the buffer
+
+  const initTime = useRef(Date.now());
+
+  const [totalEvents, setTotalEvents] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [avg, setAvg] = useState(0);
+  const [decayFactor, setDecayFactor] = useState(0);
+
+  const decayMs: number = 100;
+  const calculateDecay = (sampleRate: number) => {
+    return Math.pow(0.25, 1 / (sampleRate * (decayMs / 1000.0)));
+  };
+
   const amplitude = useRef(0);
   const postAmplitude = useRef(0);
   const canvasRef = useRef(null);
-
-  const meterWidth = 144; // Width of the meter (adjust as needed)
-  const meterHeight = 144; // Height of the meter (adjust as needed)
-  const bufferSize = 750; // Number of data points to keep in the buffer
-
   const amplitudeBuffer = useRef(new Array(bufferSize).fill(0));
   const postAmplitudeBuffer = useRef(new Array(bufferSize).fill(0));
+
+  useEffect(() => {
+    if (elapsedTime > 10) {
+      setTotalEvents(0);
+      initTime.current = Date.now();
+    }
+  }, [elapsedTime]);
 
   // update state based on incoming messages
   useEffect(() => {
     // NOTE:
     // here's im using `any` because addEventListener will complain otherwise
     const handlePluginMessage = (event: any) => {
-      let message: Amp = event.detail;
-      amplitude.current = message.pre_amplitude;
-      postAmplitude.current = message.post_amplitude;
+      setTotalEvents((prev) => prev + 1);
+      setElapsedTime((Date.now() - initTime.current) / 1000);
+      setAvg(totalEvents / elapsedTime);
+      setDecayFactor(calculateDecay(totalEvents / elapsedTime));
+      console.log(avg, elapsedTime);
+      const message: Amp = event.detail;
+      const currentPreAmplitude = amplitude.current;
+      const currentPostAmplitude = postAmplitude.current;
+      let newPreAmplitude = message.pre_amplitude;
+      let newPostAmplitude = message.post_amplitude;
+
+      if (newPreAmplitude < currentPreAmplitude) {
+        newPreAmplitude =
+          currentPreAmplitude * decayFactor +
+          newPreAmplitude * (1.0 - decayFactor);
+      }
+
+      if (newPostAmplitude < currentPostAmplitude) {
+        newPostAmplitude =
+          currentPostAmplitude * decayFactor +
+          newPostAmplitude * (1.0 - decayFactor);
+      }
+
+      amplitude.current = newPreAmplitude;
+      postAmplitude.current = newPostAmplitude;
+
+      // amplitude.current = message.pre_amplitude;
+      // postAmplitude.current = message.post_amplitude;
     };
 
     window.addEventListener("pluginMessage", handlePluginMessage);
+
     return () => {
       window.removeEventListener("pluginMessage", handlePluginMessage);
     };
-  }, []);
+  }, [totalEvents]);
 
   useEffect(() => {
     const draw = () => {
