@@ -1,21 +1,22 @@
-// @ts-nocheck
 import { Amplitude as Amp } from "@/bindings/Amplitude";
-import { useEffect, useRef, useState } from "react";
-import { clearInterval } from "timers";
+import { gainToDb } from "@/lib/utils";
+import { MutableRefObject, useEffect, useRef, useState } from "react";
 
 // TODO:
 // documentation/comments
-// remove the TS-NOCHECK!
-export function Amplitude() {
+// REFACTOR!
+
+export function Amplitude(props: { dryWet: number; threshold: number }) {
+  const { dryWet, threshold } = props;
+
   const meterWidth = 144;
   const meterHeight = 144;
-  const bufferSize = 750; // Number of data points to keep in the buffer
+  const bufferSize = 450; // Number of data points to keep in the buffer
 
   const initTime = useRef(Date.now());
 
   const [totalEvents, setTotalEvents] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [avg, setAvg] = useState(0);
   const [decayFactor, setDecayFactor] = useState(0);
 
   const decayMs: number = 100;
@@ -25,7 +26,9 @@ export function Amplitude() {
 
   const amplitude = useRef(0);
   const postAmplitude = useRef(0);
-  const canvasRef = useRef(null);
+
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
   const amplitudeBuffer = useRef(new Array(bufferSize).fill(0));
   const postAmplitudeBuffer = useRef(new Array(bufferSize).fill(0));
 
@@ -44,9 +47,9 @@ export function Amplitude() {
     const handlePluginMessage = (event: any) => {
       setTotalEvents((prev) => prev + 1);
       setElapsedTime((Date.now() - initTime.current) / 1000);
-      setAvg(totalEvents / elapsedTime);
+
       setDecayFactor(calculateDecay(totalEvents / elapsedTime));
-      console.log(avg, elapsedTime);
+
       const message: Amp = event.detail;
       const currentPreAmplitude = amplitude.current;
       const currentPostAmplitude = postAmplitude.current;
@@ -67,29 +70,27 @@ export function Amplitude() {
 
       amplitude.current = newPreAmplitude;
       postAmplitude.current = newPostAmplitude;
-
-      // amplitude.current = message.pre_amplitude;
-      // postAmplitude.current = message.post_amplitude;
     };
 
     window.addEventListener("pluginMessage", handlePluginMessage);
-
     return () => {
       window.removeEventListener("pluginMessage", handlePluginMessage);
     };
   }, [totalEvents]);
 
   useEffect(() => {
-    const draw = () => {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
+    let animationRequest: number;
+    // TODO: deal with !
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext("2d")!;
 
+    // optional
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+
+    const draw = () => {
       // of course, start with a clean slate
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // optional
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
 
       // update buffers
       amplitudeBuffer.current.push(amplitude.current);
@@ -98,46 +99,32 @@ export function Amplitude() {
       postAmplitudeBuffer.current.push(postAmplitude.current);
       postAmplitudeBuffer.current.shift();
 
-      ctx.beginPath();
-      ctx.moveTo(0, meterHeight); // Start from bottom-left corner
-
-      for (let i = 0; i < amplitudeBuffer.current.length; i++) {
-        const x = (meterWidth / bufferSize) * i;
-        const y = meterHeight - meterHeight * amplitudeBuffer.current[i];
-
-        ctx.lineTo(x, y);
-      }
-
-      // Draw back to the bottom-right corner to complete the filled area
-      ctx.lineTo(meterWidth, meterHeight);
-      ctx.closePath();
-
-      ctx.fillStyle = "rgba(92, 92, 92, 0.5)"; // Replace with your desired solid color
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.moveTo(0, meterHeight); // Start from bottom-left corner
-
-      for (let i = 0; i < postAmplitudeBuffer.current.length; i++) {
-        const x = (meterWidth / bufferSize) * i;
-        const y = meterHeight - meterHeight * postAmplitudeBuffer.current[i];
-
-        ctx.lineTo(x, y);
-      }
-
-      // Draw back to the bottom-right corner to complete the filled area
-      ctx.lineTo(meterWidth, meterHeight);
-      ctx.closePath();
-
-      ctx.fillStyle = "rgba(92, 92, 92, 0.5)"; // Replace with your desired solid color
-      ctx.fill();
-      requestAnimationFrame(draw);
+      // draw pre-processed
+      drawGain(
+        ctx,
+        meterWidth,
+        meterHeight,
+        amplitudeBuffer,
+        `rgba(150, 150, 150, ${Math.max(1 - dryWet, 0.15)})`
+      );
+      // draw post-processed
+      drawGain(
+        ctx,
+        meterWidth,
+        meterHeight,
+        postAmplitudeBuffer,
+        `rgba(180, 39, 112, ${Math.max(dryWet, 0.25)})`
+      );
+      // add threshold line
+      drawThresholdLine(ctx, threshold, meterWidth);
+      animationRequest = requestAnimationFrame(draw);
     };
-    draw();
-
-    // TODO:
-    // return () => cancels animation frame
-  }, []);
+    animationRequest = requestAnimationFrame(draw);
+    // cleanup
+    return () => {
+      cancelAnimationFrame(animationRequest);
+    };
+  }, [dryWet, threshold]);
 
   // bleh
   return (
@@ -145,4 +132,45 @@ export function Amplitude() {
       <canvas ref={canvasRef} width={meterWidth} height={meterHeight}></canvas>
     </div>
   );
+}
+
+function drawGain(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  pointBuffer: MutableRefObject<number[]>,
+  color: string
+) {
+  ctx.beginPath();
+  ctx.moveTo(0, height);
+
+  const bufferSize = pointBuffer.current.length;
+  for (let i = 0; i < bufferSize; i++) {
+    const x = (width / bufferSize) * i;
+    const y = -gainToDb(pointBuffer.current[i]);
+
+    ctx.lineTo(x, y);
+  }
+
+  // Draw back to the bottom-right corner to complete the filled area
+  ctx.lineTo(width, height);
+  ctx.closePath();
+
+  ctx.fillStyle = color; // Replace with your desired solid color
+  ctx.fill();
+}
+
+function drawThresholdLine(
+  ctx: CanvasRenderingContext2D,
+  threshold: number,
+  width: number
+) {
+  ctx.fillStyle = "black";
+
+  // optionally, add some text
+  // i think it looks to busy though
+
+  //ctx.font = "8px Arial";
+  // ctx.fillText("Thresh", 0 + 2.5, -threshold);
+  ctx.fillRect(0, -threshold, width, 1);
 }

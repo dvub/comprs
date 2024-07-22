@@ -114,6 +114,10 @@ impl Plugin for CompressorPlugin {
     ) -> ProcessStatus {
         let num_channels = buffer.channels();
 
+        let input_gain = self.params.input_gain.value();
+        let dry_wet = self.params.dry_wet.value();
+        let output_gain = self.params.output_gain.value();
+
         for mut channel_samples in buffer.iter_samples() {
             let mut pre_amplitude = 0.0;
             let mut post_amplitude = 0.0;
@@ -122,14 +126,25 @@ impl Plugin for CompressorPlugin {
             // this loops twice, once for L/R channels
             for i in 0..num_channels {
                 let sample = channel_samples.get_mut(i).unwrap();
+
+                *sample *= input_gain;
                 pre_amplitude += *sample;
-                self.compressors[i].process(
-                    sample,
+                let pre_processed = *sample;
+
+                let processed = self.compressors[i].process(
+                    *sample,
                     &self.params,
                     &mut self.shared_rms,
                     self.sample_rate,
                 );
-                post_amplitude += *sample;
+                post_amplitude += processed;
+                // blend based on dry_wet
+                let mut blended_output = (1.0 - dry_wet) * pre_processed + dry_wet * processed;
+
+                // finally, modify with output gain
+                blended_output *= output_gain;
+                // and we're done!
+                *sample = blended_output;
             }
             pre_amplitude = (pre_amplitude / num_samples as f32).abs();
             post_amplitude = (post_amplitude / num_channels as f32).abs();

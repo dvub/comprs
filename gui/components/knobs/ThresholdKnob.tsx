@@ -1,14 +1,17 @@
-import { useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 import { NormalisableRange } from "@/lib/utils";
 import { KnobBase } from "../KnobBase";
 
-export function ThresholdKnob() {
-  const [threshold, setThreshold] = useState(0);
+export function ThresholdKnob(props: {
+  value: number;
+  setValue: Dispatch<SetStateAction<number>>;
+}) {
+  const { value, setValue } = props;
   return (
     <KnobBase
       label="THRESH"
-      valueRaw={threshold}
-      setRawValue={setThreshold}
+      valueRaw={value}
+      setRawValue={setValue}
       valueMin={-100}
       valueMax={5}
       valueDefault={0}

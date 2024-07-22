@@ -1,7 +1,7 @@
 import { KnobBase } from "@/components/KnobBase";
 import { ParameterType } from "@/lib";
 import { NormalisableRange } from "@/lib/utils";
-import { useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 
 export function PercentKnob(props: {
   label: string;
@@ -11,9 +11,11 @@ export function PercentKnob(props: {
   range: NormalisableRange;
   parameter: ParameterType;
   size: number;
+  value: number;
+  setValue: Dispatch<SetStateAction<number>>;
 }) {
-  const { label, maxValue, minValue, defaultValue, range } = props;
-  const [value, setValue] = useState(defaultValue);
+  const { value, setValue, label, maxValue, minValue, defaultValue, range } =
+    props;
 
   // the sauce of this component
   // LOL

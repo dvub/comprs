@@ -58,17 +58,11 @@ impl Compressor {
     /// Processes a single input sample and returns the processed sample.
     pub fn process(
         &mut self,
-        sample: &mut f32,
+        sample: f32,
         params: &CompressorParams,
         shared_rms: &mut RmsLevelDetector,
         sample_rate: f32,
-    ) {
-        let input_gain = params.input_gain.smoothed.next();
-        *sample *= input_gain;
-
-        let output_gain = params.output_gain.smoothed.next();
-        let dry_wet = params.dry_wet.smoothed.next();
-
+    ) -> f32 {
         let threshold = params.threshold.smoothed.next();
         let ratio = params.ratio.smoothed.next();
         let knee_width = params.knee_width.smoothed.next();
@@ -82,7 +76,7 @@ impl Compressor {
 
         // blends the shared/independent RMS
         let rms_mix = params.rms_mix.smoothed.next();
-        self.update_gain(*sample, shared_rms, rms_mix, attack_coeff, release_coeff);
+        self.update_gain(sample, shared_rms, rms_mix, attack_coeff, release_coeff);
 
         // we can implement lookahead by using/processing an older sample while updating our gain state with the current sample
         // thus, we'll effectively have our internal gain state being updated *ahead* of the samples we're processing
@@ -96,20 +90,8 @@ impl Compressor {
         // if this is None, we have bigger problems
         let target_sample = *self.rms.buffer.get(buffer_index).unwrap();
 
-        // now that we have the desired sample, we can process it
-
-        // save a dry copy
-        let pre_processed = target_sample;
-        // save a wet copy
         let c = self.calculate_gain_reduction(threshold, ratio, knee_width);
-        let processed = target_sample * c;
-        // blend based on dry_wet
-        let mut blended_output = (1.0 - dry_wet) * pre_processed + dry_wet * processed;
-
-        // finally, modify with output gain
-        blended_output *= output_gain;
-        // and we're done!
-        *sample = blended_output
+        target_sample * c
     }
 
     /// Updates the internal gain of the compressor given an input sample.

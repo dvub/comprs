@@ -26,6 +26,9 @@ export default function Home() {
     sendToPlugin("Init");
   }, []);
 
+  const [dryWet, setDryWet] = useState(0);
+  const [rmsMix, setRmsMix] = useState(0);
+  const [threshold, setThreshold] = useState(0);
   return (
     <main className="main-bg w-screen h-screen overflow-hidden px-3 py-5 text-[#180619] ">
       <div className="flex justify-center items-center h-[25%]">
@@ -41,8 +44,8 @@ export default function Home() {
         />
         {/* middle section, contains [IMO] the most important parameters */}
         <div className="flex gap-3 justify-center">
-          <ThresholdKnob />
-          <Amplitude />
+          <ThresholdKnob value={threshold} setValue={setThreshold} />
+          <Amplitude dryWet={dryWet} threshold={threshold} />
           <RatioKnob />
         </div>
         {/* this div contains output-related knobs */}
@@ -56,6 +59,8 @@ export default function Home() {
             defaultValue={1}
             range={new NormalisableRange(0, 1, 0.5)}
             parameter="DryWet"
+            value={dryWet}
+            setValue={setDryWet}
           />
           <DBKnob
             label="OUT"
@@ -99,6 +104,8 @@ export default function Home() {
                 range={new NormalisableRange(0, 1, 0.5)}
                 parameter="RmsMix"
                 size={96}
+                value={rmsMix}
+                setValue={setRmsMix}
               />
               <TimeKnob
                 label="RMSLEN"
