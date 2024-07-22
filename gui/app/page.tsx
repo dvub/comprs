@@ -12,7 +12,7 @@ import { DBKnob } from "@/components/knobs/generic/DBKnob";
 import { sendToPlugin } from "@/lib";
 import { PercentKnob } from "@/components/knobs/generic/PercentKnob";
 import { Message } from "@/bindings/Messages";
-import { Amplitude } from "@/components/Amplitude";
+import { AudioGraph } from "@/components/AudioGraph";
 
 export default function Home() {
   useEffect(() => {
@@ -45,7 +45,8 @@ export default function Home() {
         {/* middle section, contains [IMO] the most important parameters */}
         <div className="flex gap-3 justify-center">
           <ThresholdKnob value={threshold} setValue={setThreshold} />
-          <Amplitude dryWet={dryWet} threshold={threshold} />
+          {/* WOWOWOWOWOW */}
+          <AudioGraph dryWet={dryWet} threshold={threshold} />
           <RatioKnob />
         </div>
         {/* this div contains output-related knobs */}
