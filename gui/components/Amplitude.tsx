@@ -29,6 +29,7 @@ export function Amplitude() {
   const amplitudeBuffer = useRef(new Array(bufferSize).fill(0));
   const postAmplitudeBuffer = useRef(new Array(bufferSize).fill(0));
 
+  // keeps numbers from getting too large, probably not necessary
   useEffect(() => {
     if (elapsedTime > 10) {
       setTotalEvents(0);
