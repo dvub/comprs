@@ -55,7 +55,7 @@ export function AudioGraph(props: {
         meterWidth,
         meterHeight,
         preAmplitudeBuffer,
-        `rgba(150, 150, 150, ${Math.max(1 - dryWet, 0.15)})`
+        `rgba(150, 150, 150, ${Math.max(1 - dryWet, 0.25)})`
       );
       // draw post-processed
       drawGain(
@@ -217,15 +217,14 @@ function drawKnee(
   knee: number,
   width: number
 ) {
-  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.fillStyle = "rgba(0,0,0,0.2)";
 
   // optionally, add some text
   // i think it looks to busy though
 
   //ctx.font = "8px Arial";
   // ctx.fillText("Thresh", 0 + 2.5, -threshold);
-  ctx.fillRect(0, -threshold + knee, width, 1);
-  ctx.fillRect(0, -threshold - knee, width, 1);
+  ctx.fillRect(0, -threshold - knee, width, knee * 2);
 }
 
 // TODO:

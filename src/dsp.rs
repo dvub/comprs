@@ -63,9 +63,9 @@ impl Compressor {
         shared_rms: &mut RmsLevelDetector,
         sample_rate: f32,
     ) -> (f32, f32) {
-        let threshold = params.threshold.smoothed.next();
-        let ratio = params.ratio.smoothed.next();
-        let knee_width = params.knee_width.smoothed.next();
+        let threshold = params.threshold.value();
+        let ratio = params.ratio.value();
+        let knee_width = params.knee_width.value();
 
         // TODO:
         // there might be a way to optimize this..
