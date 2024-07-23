@@ -6,8 +6,12 @@ import { MutableRefObject, useEffect, useRef, useState } from "react";
 // documentation/comments
 // REFACTOR!
 
-export function AudioGraph(props: { dryWet: number; threshold: number }) {
-  const { dryWet, threshold } = props;
+export function AudioGraph(props: {
+  dryWet: number;
+  threshold: number;
+  knee: number;
+}) {
+  const { dryWet, threshold, knee } = props;
 
   // canvas configuration
   const meterWidth = 144;
@@ -63,6 +67,7 @@ export function AudioGraph(props: { dryWet: number; threshold: number }) {
       );
       // add threshold line
       drawThresholdLine(ctx, threshold, meterWidth);
+      drawKnee(ctx, threshold, knee, meterWidth);
       animationRequest = requestAnimationFrame(draw);
     };
     animationRequest = requestAnimationFrame(draw);
@@ -70,7 +75,7 @@ export function AudioGraph(props: { dryWet: number; threshold: number }) {
     return () => {
       cancelAnimationFrame(animationRequest);
     };
-  }, [dryWet, threshold]);
+  }, [dryWet, threshold, knee]);
 
   return (
     <div>
@@ -204,6 +209,23 @@ function drawThresholdLine(
   //ctx.font = "8px Arial";
   // ctx.fillText("Thresh", 0 + 2.5, -threshold);
   ctx.fillRect(0, -threshold, width, 1);
+}
+
+function drawKnee(
+  ctx: CanvasRenderingContext2D,
+  threshold: number,
+  knee: number,
+  width: number
+) {
+  ctx.fillStyle = "rgba(0,0,0,0.5)";
+
+  // optionally, add some text
+  // i think it looks to busy though
+
+  //ctx.font = "8px Arial";
+  // ctx.fillText("Thresh", 0 + 2.5, -threshold);
+  ctx.fillRect(0, -threshold + knee, width, 1);
+  ctx.fillRect(0, -threshold - knee, width, 1);
 }
 
 // TODO:

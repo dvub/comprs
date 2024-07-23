@@ -129,9 +129,8 @@ impl Plugin for CompressorPlugin {
 
                 *sample *= input_gain;
                 pre_amplitude += *sample;
-                let pre_processed = *sample;
 
-                let processed = self.compressors[i].process(
+                let (pre_processed, processed) = self.compressors[i].process(
                     *sample,
                     &self.params,
                     &mut self.shared_rms,
@@ -146,6 +145,7 @@ impl Plugin for CompressorPlugin {
                 // and we're done!
                 *sample = blended_output;
             }
+
             pre_amplitude = (pre_amplitude / num_samples as f32).abs();
             post_amplitude = (post_amplitude / num_channels as f32).abs();
 

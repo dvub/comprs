@@ -29,6 +29,7 @@ export default function Home() {
   const [dryWet, setDryWet] = useState(0);
   const [rmsMix, setRmsMix] = useState(0);
   const [threshold, setThreshold] = useState(0);
+  const [knee, setKnee] = useState(0);
   return (
     <main className="main-bg w-screen h-screen overflow-hidden px-3 py-5 text-[#180619] ">
       <div className="flex justify-center items-center h-[25%]">
@@ -46,7 +47,7 @@ export default function Home() {
         <div className="flex gap-3 justify-center">
           <ThresholdKnob value={threshold} setValue={setThreshold} />
           {/* WOWOWOWOWOW */}
-          <AudioGraph dryWet={dryWet} threshold={threshold} />
+          <AudioGraph dryWet={dryWet} threshold={threshold} knee={knee} />
           <RatioKnob />
         </div>
         {/* this div contains output-related knobs */}
@@ -92,7 +93,7 @@ export default function Home() {
             parameter="ReleaseTime"
           />
 
-          <KneeKnob />
+          <KneeKnob value={knee} setValue={setKnee} />
           {/* RMS CONTROLS */}
           <div className="text-center">
             <p>RMS CTRL</p>

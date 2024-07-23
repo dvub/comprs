@@ -62,7 +62,7 @@ impl Compressor {
         params: &CompressorParams,
         shared_rms: &mut RmsLevelDetector,
         sample_rate: f32,
-    ) -> f32 {
+    ) -> (f32, f32) {
         let threshold = params.threshold.smoothed.next();
         let ratio = params.ratio.smoothed.next();
         let knee_width = params.knee_width.smoothed.next();
@@ -91,7 +91,7 @@ impl Compressor {
         let target_sample = *self.rms.buffer.get(buffer_index).unwrap();
 
         let c = self.calculate_gain_reduction(threshold, ratio, knee_width);
-        target_sample * c
+        (target_sample, target_sample * c)
     }
 
     /// Updates the internal gain of the compressor given an input sample.

@@ -2,13 +2,13 @@ import { useState } from "react";
 import { KnobBase } from "../KnobBase";
 import { NormalisableRange } from "@/lib/utils";
 
-export function KneeKnob() {
-  const [knee, setKnee] = useState(5);
+export function KneeKnob(props: { value: number; setValue: any }) {
+  const { value, setValue } = props;
   return (
     <KnobBase
       label="KNEE"
-      valueRaw={knee}
-      setRawValue={setKnee}
+      valueRaw={value}
+      setRawValue={setValue}
       valueMin={0}
       valueMax={20}
       valueDefault={5}
