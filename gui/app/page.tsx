@@ -13,6 +13,7 @@ import { sendToPlugin } from "@/lib";
 import { PercentKnob } from "@/components/knobs/generic/PercentKnob";
 import { Message } from "@/bindings/Messages";
 import { AudioGraph } from "@/components/AudioGraph";
+import { GRMeter } from "@/components/GRMeter";
 
 export default function Home() {
   useEffect(() => {
@@ -48,6 +49,7 @@ export default function Home() {
           <ThresholdKnob value={threshold} setValue={setThreshold} />
           {/* WOWOWOWOWOW */}
           <AudioGraph dryWet={dryWet} threshold={threshold} knee={knee} />
+          <GRMeter />
           <RatioKnob />
         </div>
         {/* this div contains output-related knobs */}
