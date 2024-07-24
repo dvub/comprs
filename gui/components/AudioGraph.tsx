@@ -1,5 +1,5 @@
 import type { Amplitude as AmplitudeMessage } from "@/bindings/Amplitude";
-import { useAmplitudeUpdate } from "@/hooks";
+import { useAmplitudeUpdate, useSampleRate } from "@/hooks";
 import { gainToDb } from "@/lib/utils";
 import { MutableRefObject, useEffect, useRef, useState } from "react";
 
@@ -23,8 +23,10 @@ export function AudioGraph(props: {
   // set up buffers, refs, etc.
   const preAmplitude = useRef(0);
   const postAmplitude = useRef(0);
-  // TODO: BETTER NAME HERE
-  useAmplitudeUpdate(preAmplitude, postAmplitude);
+
+  const { pre, post } = useAmplitudeUpdate();
+  preAmplitude.current = pre;
+  postAmplitude.current = post;
 
   const preAmplitudeBuffer = useRef(new Array(bufferSize).fill(0));
   const postAmplitudeBuffer = useRef(new Array(bufferSize).fill(0));
@@ -79,7 +81,7 @@ export function AudioGraph(props: {
   }, [dryWet, threshold, knee]);
 
   return (
-    <div>
+    <div className="border-2 border-gray-800">
       <canvas ref={canvasRef} width={meterWidth} height={meterHeight}></canvas>
     </div>
   );

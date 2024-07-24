@@ -6,54 +6,63 @@ import { MutableRefObject, useEffect, useRef, useState } from "react";
 function isAmplitudeMessage(message: any): message is Amplitude {
   return (message as Amplitude).pre_amplitude !== undefined;
 }
+/*
 
-export function useAmplitudeUpdate(
-  amplitude: MutableRefObject<number>,
-  postAmplitude: MutableRefObject<number>
-) {
+
+
+function useDecay() {
+      const decayMs: number = 100;
+  const calculateDecay = (sampleRate: number) => {
+    return Math.pow(0.25, 1 / (sampleRate * (decayMs / 1000.0)));
+  };
   const sampleRate = useSampleRate();
+  const decayFactor = calculateDecay(sampleRate);
+
+  if (newPreAmplitude < preAmplitude) {
+    preAmplitude =
+      currentPreAmplitude * decayFactor + newPreAmplitude * (1.0 - decayFactor);
+  }
+
+  if (newPostAmplitude < currentPostAmplitude) {
+    newPostAmplitude =
+      currentPostAmplitude * decayFactor +
+      newPostAmplitude * (1.0 - decayFactor);
+  }
+
+}
+*/
+
+// TODO:
+// move this??
+export function getDecay(decayMs: number) {
+  const sampleRate = useSampleRate();
+  return Math.pow(0.25, 1 / (sampleRate * (decayMs / 1000.0)));
+}
+
+export function useAmplitudeUpdate() {
+  const [amplitudes, setAmplitudes] = useState({ pre: 0, post: 0 });
   // update state based on incoming messages
   useEffect(() => {
     // NOTE:
     // here's im using `any` because addEventListener will complain otherwise
     const handlePluginMessage = (event: any) => {
-      // make sure the event type is actually correctly
+      // make sure the event type is actually correct
       const message = event.detail;
       if (!isAmplitudeMessage(message)) {
         return;
       }
-      const currentPreAmplitude = amplitude.current;
-      const currentPostAmplitude = postAmplitude.current;
-      let newPreAmplitude = message.pre_amplitude;
-      let newPostAmplitude = message.post_amplitude;
-
-      const decayMs: number = 100;
-      const calculateDecay = (sampleRate: number) => {
-        return Math.pow(0.25, 1 / (sampleRate * (decayMs / 1000.0)));
-      };
-      const decayFactor = calculateDecay(sampleRate);
-
-      if (newPreAmplitude < currentPreAmplitude) {
-        newPreAmplitude =
-          currentPreAmplitude * decayFactor +
-          newPreAmplitude * (1.0 - decayFactor);
-      }
-
-      if (newPostAmplitude < currentPostAmplitude) {
-        newPostAmplitude =
-          currentPostAmplitude * decayFactor +
-          newPostAmplitude * (1.0 - decayFactor);
-      }
-
-      amplitude.current = newPreAmplitude;
-      postAmplitude.current = newPostAmplitude;
+      setAmplitudes({
+        pre: message.pre_amplitude,
+        post: message.post_amplitude,
+      });
     };
 
     window.addEventListener("pluginMessage", handlePluginMessage);
     return () => {
       window.removeEventListener("pluginMessage", handlePluginMessage);
     };
-  }, [sampleRate]);
+  }, []);
+  return amplitudes;
 }
 
 // Custom hook which keeps track of front-end sample rate.
