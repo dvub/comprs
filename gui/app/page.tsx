@@ -39,8 +39,26 @@ export default function Home() {
       <p className="absolute text-xs bottom-0 right-0 opacity-50">
         {a.toFixed(2)} TPS
       </p>
-      <div className="flex justify-center items-center h-[25%]">
-        <h1 className="font-thin text-7xl">COMPRS</h1>
+      <h1 className="absolute bottom-0 left-0">COMPRS vX.0</h1>
+
+      <div className="flex justify-center items-center h-[25%] gap-3">
+        <TimeKnob
+          label="ATK"
+          minValue={0}
+          maxValue={1}
+          defaultValue={0.001}
+          range={new NormalisableRange(0, 1, 0.01)}
+          parameter="AttackTime"
+        />
+        <KneeKnob value={knee} setValue={setKnee} />
+        <TimeKnob
+          label="RLS"
+          minValue={0}
+          maxValue={5}
+          defaultValue={0.05}
+          range={new NormalisableRange(0, 5, 0.5)}
+          parameter="ReleaseTime"
+        />
       </div>
       <div className="h-[50%] flex justify-between items-center gap-3">
         <DBKnob
@@ -84,24 +102,6 @@ export default function Home() {
       {/* bottom section, just kinda put misc params here */}
       <div className="h-[25%] w-full flex justify-center">
         <div className="flex gap-3 items-center">
-          <TimeKnob
-            label="ATK"
-            minValue={0}
-            maxValue={1}
-            defaultValue={0.001}
-            range={new NormalisableRange(0, 1, 0.01)}
-            parameter="AttackTime"
-          />
-          <TimeKnob
-            label="RLS"
-            minValue={0}
-            maxValue={5}
-            defaultValue={0.05}
-            range={new NormalisableRange(0, 5, 0.5)}
-            parameter="ReleaseTime"
-          />
-
-          <KneeKnob value={knee} setValue={setKnee} />
           {/* RMS CONTROLS */}
           <div className="text-center">
             <p>RMS CTRL</p>
