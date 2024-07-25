@@ -14,8 +14,11 @@ import { PercentKnob } from "@/components/knobs/generic/PercentKnob";
 import { Message } from "@/bindings/Messages";
 import { AudioGraph } from "@/components/AudioGraph";
 import { GRMeter } from "@/components/GRMeter";
+import { useSampleRate } from "@/hooks";
 
 export default function Home() {
+  const a = useSampleRate();
+
   useEffect(() => {
     window.onPluginMessage = (message: Message) => {
       const event = new CustomEvent("pluginMessage", { detail: message });
@@ -32,7 +35,10 @@ export default function Home() {
   const [threshold, setThreshold] = useState(0);
   const [knee, setKnee] = useState(0);
   return (
-    <main className="main-bg w-screen h-screen overflow-hidden px-3 py-5 text-[#180619] ">
+    <main className="relative main-bg w-screen h-screen overflow-hidden px-3 py-5 text-[#180619] ">
+      <p className="absolute text-xs bottom-0 right-0 opacity-50">
+        {a.toFixed(2)} TPS
+      </p>
       <div className="flex justify-center items-center h-[25%]">
         <h1 className="font-thin text-7xl">COMPRS</h1>
       </div>
@@ -45,7 +51,7 @@ export default function Home() {
           parameter="InputGain"
         />
         {/* middle section, contains [IMO] the most important parameters */}
-        <div className="flex gap-3 justify-center">
+        <div className="flex gap-3 justify-center items-center">
           <ThresholdKnob value={threshold} setValue={setThreshold} />
           {/* WOWOWOWOWOW */}
           <AudioGraph dryWet={dryWet} threshold={threshold} knee={knee} />
@@ -53,7 +59,7 @@ export default function Home() {
           <RatioKnob />
         </div>
         {/* this div contains output-related knobs */}
-        <div className="text-center">
+        <div className="text-center ">
           <p>OUT CTRL</p>
           <PercentKnob
             label="DRYWET"

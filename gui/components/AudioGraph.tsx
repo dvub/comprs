@@ -58,7 +58,7 @@ export function AudioGraph(props: {
         meterWidth,
         meterHeight,
         preAmplitudeBuffer,
-        `rgba(150, 150, 150, ${Math.max(1 - dryWet, 0.25)})`
+        `rgba(113, 197, 156, ${Math.max(1 - dryWet, 0.5)})`
       );
       // draw post-processed
       drawGain(
@@ -81,8 +81,13 @@ export function AudioGraph(props: {
   }, [dryWet, threshold, knee]);
 
   return (
-    <div className="border-2 border-gray-800">
-      <canvas ref={canvasRef} width={meterWidth} height={meterHeight}></canvas>
+    <div>
+      <canvas
+        ref={canvasRef}
+        width={meterWidth}
+        height={meterHeight}
+        className="border-2 border-gray-800"
+      ></canvas>
     </div>
   );
 }

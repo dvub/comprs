@@ -34,7 +34,7 @@ function useDecay() {
 
 // TODO:
 // move this??
-export function getDecay(decayMs: number) {
+export function useDecayFactor(decayMs: number) {
   const sampleRate = useSampleRate();
   return Math.pow(0.25, 1 / (sampleRate * (decayMs / 1000.0)));
 }

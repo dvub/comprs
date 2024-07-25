@@ -94,7 +94,6 @@ pub fn create_editor(plugin: &CompressorPlugin) -> WebViewEditor {
                         }
                         Message::ParameterUpdate(event) => {
                             let (param, value) = params.get_param(&event);
-                            println!("{}, {}", param, value);
                             // todo(?)
                             // is retain() necessary
                             gui_event_buffer.retain(|d| discriminant(d) != discriminant(&event));

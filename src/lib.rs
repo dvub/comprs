@@ -136,12 +136,16 @@ impl Plugin for CompressorPlugin {
                     &mut self.shared_rms,
                     self.sample_rate,
                 );
-                post_amplitude += processed;
+                // TODO:
+                // might have to play around with the order of operations here
+
                 // blend based on dry_wet
                 let mut blended_output = (1.0 - dry_wet) * pre_processed + dry_wet * processed;
 
                 // finally, modify with output gain
                 blended_output *= output_gain;
+                post_amplitude += blended_output;
+
                 // and we're done!
                 *sample = blended_output;
             }
