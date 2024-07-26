@@ -14,6 +14,8 @@ export function GRMeter() {
   const gr = useRef(0);
   // use our custom hooks
   const { pre, post } = useAmplitudeUpdate();
+  // TODO:
+  // should this be tied to our attack parameter?
   const decayFactor = useDecayFactor(100);
 
   // TODO:
