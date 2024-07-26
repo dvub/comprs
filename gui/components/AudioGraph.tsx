@@ -1,5 +1,5 @@
 import type { Amplitude as AmplitudeMessage } from "@/bindings/Amplitude";
-import { useAmplitudeUpdate, useSampleRate } from "@/hooks";
+import { useAmplitudeUpdate, useDecayFactor, useSampleRate } from "@/hooks";
 import { gainToDb } from "@/lib/utils";
 import { MutableRefObject, useEffect, useRef, useState } from "react";
 
@@ -14,9 +14,11 @@ export function AudioGraph(props: {
 }) {
   const { dryWet, threshold, knee } = props;
 
+  const decayFactor = useDecayFactor(100);
+
   // canvas configuration
-  const meterWidth = 144;
-  const meterHeight = 144;
+  const meterWidth = 160;
+  const meterHeight = meterWidth;
   const bufferSize = 450;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -25,8 +27,20 @@ export function AudioGraph(props: {
   const postAmplitude = useRef(0);
 
   const { pre, post } = useAmplitudeUpdate();
-  preAmplitude.current = pre;
-  postAmplitude.current = post;
+  // add decay over time
+  if (pre < preAmplitude.current) {
+    preAmplitude.current =
+      preAmplitude.current * decayFactor + pre * (1.0 - decayFactor);
+  } else {
+    preAmplitude.current = pre;
+  }
+
+  if (post < postAmplitude.current) {
+    postAmplitude.current =
+      postAmplitude.current * decayFactor + post * (1.0 - decayFactor);
+  } else {
+    postAmplitude.current = post;
+  }
 
   const preAmplitudeBuffer = useRef(new Array(bufferSize).fill(0));
   const postAmplitudeBuffer = useRef(new Array(bufferSize).fill(0));
@@ -69,8 +83,8 @@ export function AudioGraph(props: {
         `rgba(180, 39, 112, ${Math.max(dryWet, 0.25)})`
       );
       // add threshold line
-      drawThresholdLine(ctx, threshold, meterWidth);
-      drawKnee(ctx, threshold, knee, meterWidth);
+      drawThresholdLine(ctx, threshold, meterWidth, meterHeight);
+      drawKnee(ctx, threshold, knee, meterWidth, meterHeight);
       animationRequest = requestAnimationFrame(draw);
     };
     animationRequest = requestAnimationFrame(draw);
@@ -105,7 +119,7 @@ function drawGain(
   const bufferSize = pointBuffer.current.length;
   for (let i = 0; i < bufferSize; i++) {
     const x = (width / bufferSize) * i;
-    const y = -gainToDb(pointBuffer.current[i]);
+    const y = -(gainToDb(pointBuffer.current[i]) * height) / 100;
 
     ctx.lineTo(x, y);
   }
@@ -121,7 +135,8 @@ function drawGain(
 function drawThresholdLine(
   ctx: CanvasRenderingContext2D,
   threshold: number,
-  width: number
+  width: number,
+  height: number
 ) {
   ctx.fillStyle = "black";
 
@@ -130,14 +145,15 @@ function drawThresholdLine(
 
   //ctx.font = "8px Arial";
   // ctx.fillText("Thresh", 0 + 2.5, -threshold);
-  ctx.fillRect(0, -threshold, width, 1);
+  ctx.fillRect(0, (-threshold * height) / 100, width, 1);
 }
 
 function drawKnee(
   ctx: CanvasRenderingContext2D,
   threshold: number,
   knee: number,
-  width: number
+  width: number,
+  height: number
 ) {
   ctx.fillStyle = "rgba(0,0,0,0.2)";
 
@@ -146,5 +162,10 @@ function drawKnee(
 
   //ctx.font = "8px Arial";
   // ctx.fillText("Thresh", 0 + 2.5, -threshold);
-  ctx.fillRect(0, -threshold - knee, width, knee * 2);
+  ctx.fillRect(
+    0,
+    ((-threshold - knee) * height) / 100,
+    width,
+    (knee * 2 * height) / 100
+  );
 }

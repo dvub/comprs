@@ -1,4 +1,4 @@
-import { useDecayFactor as getDecay, useAmplitudeUpdate } from "@/hooks";
+import { useDecayFactor as useDecayFactor, useAmplitudeUpdate } from "@/hooks";
 import { gainToDb } from "@/lib/utils";
 import { useEffect, useRef } from "react";
 
@@ -9,12 +9,12 @@ export function GRMeter() {
 
   // dimensions of canvas
   const width = 20;
-  const height = 144;
+  const height = 160;
 
   const gr = useRef(0);
   // use our custom hooks
   const { pre, post } = useAmplitudeUpdate();
-  const decayFactor = getDecay(100);
+  const decayFactor = useDecayFactor(100);
 
   // TODO:
   // should this calculations be inside of a useEffect?
