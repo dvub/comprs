@@ -72,6 +72,8 @@ impl Plugin for CompressorPlugin {
         AudioIOLayout {
             main_input_channels: NonZeroU32::new(2),
             main_output_channels: NonZeroU32::new(2),
+            // should there be 2 here?
+            aux_input_ports: &[new_nonzero_u32(2); 1],
             ..AudioIOLayout::const_default()
         },
         AudioIOLayout {
@@ -111,16 +113,19 @@ impl Plugin for CompressorPlugin {
     fn process(
         &mut self,
         buffer: &mut Buffer,
-        _aux: &mut AuxiliaryBuffers,
+        aux: &mut AuxiliaryBuffers,
         context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
         let num_channels = buffer.channels();
-
+        let aux_samples = aux.inputs[0].iter_samples();
+        // TODO:
+        // use smoothed vals
         let input_gain = self.params.input_gain.value();
         let dry_wet = self.params.dry_wet.value();
         let output_gain = self.params.output_gain.value();
 
-        for mut channel_samples in buffer.iter_samples() {
+        for (mut channel_samples, mut aux_channel_samples) in buffer.iter_samples().zip(aux_samples)
+        {
             let mut pre_amplitude = 0.0;
             let mut post_amplitude = 0.0;
             let mut amt_reduced = 0.0;
@@ -130,6 +135,7 @@ impl Plugin for CompressorPlugin {
             // this loops twice, once for L/R channels
             for i in 0..num_channels {
                 let sample = channel_samples.get_mut(i).unwrap();
+                let _aux_sample = aux_channel_samples.get_mut(i).unwrap();
 
                 let (mut pre_processed, processed, amount_reduced) = self.compressors[i].process(
                     *sample,
