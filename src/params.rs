@@ -62,12 +62,14 @@ pub enum Message {
 pub struct Amplitude {
     pre_amplitude: f32,
     post_amplitude: f32,
+    amt_reduced: f32,
 }
 impl Amplitude {
-    pub fn new(pre: f32, post: f32) -> Self {
+    pub fn new(pre: f32, post: f32, reduced: f32) -> Self {
         Amplitude {
             pre_amplitude: pre,
             post_amplitude: post,
+            amt_reduced: reduced,
         }
     }
 }

@@ -36,11 +36,13 @@ function useDecay() {
 // move this??
 export function useDecayFactor(decayMs: number) {
   const sampleRate = useSampleRate();
-  return Math.pow(0.25, 1 / (sampleRate * (decayMs / 1000.0)));
+  // TODO:
+  // this Math.min(60) might be weird and not necessary
+  return Math.pow(0.25, 1 / (Math.min(60, sampleRate) * (decayMs / 1000.0)));
 }
 
 export function useAmplitudeUpdate() {
-  const [amplitudes, setAmplitudes] = useState({ pre: 0, post: 0 });
+  const [amplitudes, setAmplitudes] = useState({ pre: 0, post: 0, reduced: 0 });
   // update state based on incoming messages
   useEffect(() => {
     // NOTE:
@@ -54,6 +56,7 @@ export function useAmplitudeUpdate() {
       setAmplitudes({
         pre: message.pre_amplitude,
         post: message.post_amplitude,
+        reduced: message.amt_reduced,
       });
     };
 

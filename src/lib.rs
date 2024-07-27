@@ -22,6 +22,7 @@ pub struct CompressorPlugin {
     shared_rms: RmsLevelDetector,
     pre_amplitude: Arc<AtomicF32>,
     post_amplitude: Arc<AtomicF32>,
+    amt_reduced: Arc<AtomicF32>,
 }
 
 impl Default for CompressorPlugin {
@@ -35,6 +36,7 @@ impl Default for CompressorPlugin {
             shared_rms: RmsLevelDetector::default(),
             pre_amplitude: Arc::new(AtomicF32::new(0.0)),
             post_amplitude: Arc::new(AtomicF32::new(0.0)),
+            amt_reduced: Arc::new(AtomicF32::new(0.0)),
         }
     }
 }
@@ -121,23 +123,25 @@ impl Plugin for CompressorPlugin {
         for mut channel_samples in buffer.iter_samples() {
             let mut pre_amplitude = 0.0;
             let mut post_amplitude = 0.0;
+            let mut amt_reduced = 0.0;
+
             let num_samples = channel_samples.len();
 
             // this loops twice, once for L/R channels
             for i in 0..num_channels {
                 let sample = channel_samples.get_mut(i).unwrap();
 
-                *sample *= input_gain;
-                pre_amplitude += *sample;
-
-                let (pre_processed, processed) = self.compressors[i].process(
+                let (mut pre_processed, processed, amount_reduced) = self.compressors[i].process(
                     *sample,
                     &self.params,
                     &mut self.shared_rms,
                     self.sample_rate,
                 );
+                amt_reduced += amount_reduced;
                 // TODO:
                 // might have to play around with the order of operations here
+                pre_processed *= input_gain;
+                pre_amplitude += pre_processed;
 
                 // blend based on dry_wet
                 let mut blended_output = (1.0 - dry_wet) * pre_processed + dry_wet * processed;
@@ -151,10 +155,12 @@ impl Plugin for CompressorPlugin {
             }
 
             pre_amplitude = (pre_amplitude / num_samples as f32).abs();
-            post_amplitude = (post_amplitude / num_channels as f32).abs();
+            post_amplitude = (post_amplitude / num_samples as f32).abs();
+            amt_reduced = (amt_reduced / num_samples as f32).abs();
 
             self.pre_amplitude.store(pre_amplitude, Ordering::Relaxed);
             self.post_amplitude.store(post_amplitude, Ordering::Relaxed);
+            self.amt_reduced.store(amt_reduced, Ordering::Relaxed);
         }
 
         if self.params.rms_update.swap(false, Ordering::Relaxed) {

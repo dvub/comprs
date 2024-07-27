@@ -20,6 +20,7 @@ pub fn create_editor(plugin: &CompressorPlugin) -> WebViewEditor {
 
     let pre_amplitude = plugin.pre_amplitude.clone();
     let post_amplitude = plugin.post_amplitude.clone();
+    let reduced = plugin.amt_reduced.clone();
 
     let size = (750, 500);
 
@@ -129,7 +130,8 @@ pub fn create_editor(plugin: &CompressorPlugin) -> WebViewEditor {
 
             let pre = pre_amplitude.load(Ordering::Relaxed);
             let post = post_amplitude.load(Ordering::Relaxed);
-            let message = Amplitude::new(pre, post);
+            let gr = reduced.load(Ordering::Relaxed);
+            let message = Amplitude::new(pre, post, gr);
             ctx.send_json(json!(message)).expect("OH NO!");
 
             // once we've sent our pending updates to the GUI, we can clear our event buffer;

@@ -3,38 +3,22 @@ import { gainToDb } from "@/lib/utils";
 import { useEffect, useRef } from "react";
 
 export function GRMeter() {
-  // normalization factor
-  // the meter will be full if the amt reduced is >= 100 dB
-  const maxDB = 100;
-
+  // canvas setup
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   // dimensions of canvas
   const width = 20;
   const height = 160;
 
+  // normalization factor
+  // the meter will be full if the amt reduced is >= 100 dB
+  const maxDB = 100;
+
   const gr = useRef(0);
   // use our custom hooks
-  const { pre, post } = useAmplitudeUpdate();
-  // TODO:
-  // should this be tied to our attack parameter?
-  const decayFactor = useDecayFactor(100);
+  const { reduced } = useAmplitudeUpdate();
+  gr.current = Math.abs(gainToDb(reduced));
 
-  // TODO:
-  // should this calculations be inside of a useEffect?
-  // this is kind of messy too
-  let newDifference = 0;
-  if (pre > 0 && post > 0) {
-    newDifference = gainToDb(pre) - gainToDb(post);
-  }
-
-  // add decay over time
-  if (newDifference < gr.current) {
-    gr.current = gr.current * decayFactor + newDifference * (1.0 - decayFactor);
-  } else {
-    gr.current = newDifference;
-  }
-
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
+  // now for the drawing stuff
   useEffect(() => {
     let animationRequest: number;
     // TODO: deal with !
@@ -45,8 +29,10 @@ export function GRMeter() {
       ctx.clearRect(0, 0, width, height);
 
       ctx.fillStyle = "#b42770";
+
       // here is where we actually apply the normalization
-      ctx.fillRect(0, 0, width, Math.min((gr.current * height) / maxDB, maxDB));
+      const h = Math.min((gr.current * height) / maxDB, maxDB);
+      ctx.fillRect(0, 0, width, h);
 
       animationRequest = requestAnimationFrame(draw);
     };

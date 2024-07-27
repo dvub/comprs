@@ -17,7 +17,7 @@ import { GRMeter } from "@/components/GRMeter";
 import { useSampleRate } from "@/hooks";
 
 export default function Home() {
-  const a = useSampleRate();
+  const tps = useSampleRate();
 
   useEffect(() => {
     window.onPluginMessage = (message: Message) => {
@@ -34,10 +34,14 @@ export default function Home() {
   const [rmsMix, setRmsMix] = useState(0);
   const [threshold, setThreshold] = useState(0);
   const [knee, setKnee] = useState(0);
+  const [releaseTime, setReleaseTime] = useState(0);
+  const [rmsLen, setRmsLen] = useState(0);
+  const [lookahead, setLookahead] = useState(0);
+  const [attack, setAttack] = useState(0);
   return (
     <main className="relative main-bg w-screen h-screen overflow-hidden px-3 py-5 text-[#180619] ">
       <p className="absolute text-xs bottom-0 right-0 opacity-50">
-        {a.toFixed(2)} TPS
+        {tps.toFixed(2)} TPS
       </p>
       <h1 className="absolute bottom-0 left-0">COMPRS vX.0</h1>
 
@@ -49,6 +53,8 @@ export default function Home() {
           defaultValue={0.001}
           range={new NormalisableRange(0, 1, 0.01)}
           parameter="AttackTime"
+          value={attack}
+          setValue={setAttack}
         />
         <KneeKnob value={knee} setValue={setKnee} />
         <TimeKnob
@@ -58,6 +64,8 @@ export default function Home() {
           defaultValue={0.05}
           range={new NormalisableRange(0, 5, 0.5)}
           parameter="ReleaseTime"
+          value={releaseTime}
+          setValue={setReleaseTime}
         />
       </div>
       <div className="h-[50%] flex justify-between items-center gap-3">
@@ -124,15 +132,19 @@ export default function Home() {
                 defaultValue={0.01}
                 range={new NormalisableRange(0.001, 0.03, 0.015)}
                 parameter="RmsBufferSize"
+                value={rmsLen}
+                setValue={setRmsLen}
               />
-              {/*  TODO: dynamically set min/max on this */}
+
               <TimeKnob
                 label="LKAHD"
                 minValue={0}
-                maxValue={0.03}
+                maxValue={rmsLen}
                 defaultValue={0}
-                range={new NormalisableRange(0, 0.03, 0.015)}
+                range={new NormalisableRange(0, rmsLen, rmsLen / 2)}
                 parameter="Lookahead"
+                value={lookahead}
+                setValue={setLookahead}
               />
             </div>
           </div>

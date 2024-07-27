@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 import { KnobBase } from "../../KnobBase";
 import { NormalisableRange } from "@/lib/utils";
 import { Parameter } from "@/bindings/Parameter";
@@ -11,9 +11,11 @@ export function TimeKnob(props: {
   defaultValue: number;
   range: NormalisableRange;
   parameter: ParameterType;
+  value: number;
+  setValue: Dispatch<SetStateAction<number>>;
 }) {
-  const { label, maxValue, minValue, defaultValue, range } = props;
-  const [value, setValue] = useState(defaultValue);
+  const { label, maxValue, minValue, defaultValue, range, value, setValue } =
+    props;
 
   // the sauce of this component
   // LOL
